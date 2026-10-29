@@ -1,0 +1,42 @@
+# ===== Java / Gradle =====
+.gradle/
+build/
+out/
+bin/
+*.class
+*.jar
+*.war
+*.ear
+*.log
+hs_err_pid*
+!gradle/wrapper/gradle-wrapper.jar
+
+# ===== Node =====
+node_modules/
+dist/
+.npm/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.pnpm-store/
+
+# ===== VS Code =====
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+!.vscode/launch.json
+*.code-workspace
+
+# ===== OS =====
+.DS_Store
+._*
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# ===== 환경변수 (비밀값은 .env에만 두고 커밋하지 않음) =====
+.env
+.env.*
+!.env.example
