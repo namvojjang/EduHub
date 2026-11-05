@@ -2,49 +2,34 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## 프로젝트 현황
-
 EduHub: 사내 교육과정 조회·수강 신청 시스템. 임직원(수강생)과 교육 담당자(관리자)가 사용한다.
+요구사항·결정 사항의 기준 문서는 `docs/requirements.md`다(FR-xx, NFR-xx, D-xx). 동작을 바꾸기 전에 읽고, 커밋과 코드에서는 해당 ID로 참조한다.
 
-빌드·테스트 명령은 Gradle·npm 설정이 실제로 추가되고 동작을 확인한 뒤에 이 파일에 적는다. 그 전에는 명령을 추측해서 쓰지 않는다.
+## 디렉터리 지도
 
-**요구사항과 결정 사항의 기준 문서는 [docs/requirements.md](docs/requirements.md)다.** 기능(FR-xx)과 비기능(NFR-xx) 요구사항, 결정 사항(D-xx), 신청 상태 전이표가 있다. 동작을 구현하거나 바꾸기 전에 반드시 읽고, 커밋과 코드에서는 해당 ID로 참조한다.
+| 경로 | 내용 | 세부 지침 |
+|---|---|---|
+| `backend/` | Java 8, Spring Boot 2.7, Gradle 7.6(Kotlin DSL, 래퍼 포함) | `backend/CLAUDE.md` |
+| `frontend/` | React 18 + TypeScript, MUI, Axios, Module Federation(`shell`, `course-mfe`, `enrollment-mfe`), npm workspaces. 아직 코드 없음 | `frontend/CLAUDE.md` |
+| `docs/` | 요구사항·결정 사항 | — |
+| `.env.example` | 필요한 환경 변수 이름(값 없음) | — |
 
-## 기술 스택 (계획)
+## 실행 명령
 
-- 백엔드: Java 21, Spring Boot 3, Spring Data JPA, Flyway, springdoc-openapi, PostgreSQL. Gradle Kotlin DSL로 빌드한다.
-- 프론트엔드: React 18 + TypeScript, MUI, Axios. npm workspaces를 쓰고, Module Federation으로 `shell`, `course-mfe`, `enrollment-mfe`를 나눈다.
+```bash
+cd backend && ./gradlew test            # 테스트 (포맷 검사 포함은 ./gradlew check)
+cd backend && ./gradlew spotlessApply   # 포맷 적용
+cd backend && ./gradlew bootRun         # 실행 (dev 프로필, .env.example의 DB 변수 필요)
+```
 
-## 아키텍처 규칙 (NFR에서 온 제약)
+프론트엔드 명령은 설정이 추가되고 동작을 확인한 뒤에 적는다. 그 전에는 명령을 추측해서 쓰지 않는다.
 
-- 백엔드는 도메인별 패키지(`course`, `enrollment`)로 나누고 계층 규칙을 지킨다. 화면도 MFE 단위로 나눈다 (NFR-07).
-- 모든 API는 OpenAPI 문서를 갖춘다. 프론트 API 클라이언트는 손으로 쓰지 않고 스펙에서 생성한다 (NFR-04).
-- 설정은 개발·테스트·운영으로 분리한다. 비밀값은 `.env`에만 두고 커밋하지 않는다. `.env.example`만 커밋한다 (NFR-03, NFR-06).
-- 서비스 계층 테스트 커버리지는 70% 이상이어야 한다. CI에서 빌드·테스트·포맷 검사를 돌린다 (NFR-05).
-- 팀원이 AI 없이도 구조와 핵심 파일을 설명할 수 있어야 한다 (NFR-08). 구조를 단순하게 두고, 의도가 드러나지 않는 추상화는 피한다.
+## 공통 규칙
 
-## 도메인 핵심 규칙 (구현 시 놓치기 쉬운 것)
-
-- **정원 정합성:** 동시에 100명이 마지막 1자리에 신청해도 정원을 넘으면 안 된다 (NFR-01). 신청·취소·승급은 잠금 등 동시성 제어가 필요하고, 동시성 테스트로 검증한다.
-- **대기 순번은 저장하지 않는다.** 신청 시각 순으로 그때그때 계산한다 (D-04). 동시 신청으로 시각이 같을 때의 동점 처리 기준(예: 신청 ID 순)은 아직 정해지지 않았다. 임의로 정하지 말고, D-04가 갱신되면 그 기준을 따른다.
-- **자동 승급:** 확정자가 취소하면 같은 트랜잭션에서 대기 1순위를 확정한다. 정원을 늘리면 늘어난 자리만큼 순번대로 확정한다. 수락 절차는 없다. 확정 시각과 "대기에서 승급" 여부를 기록한다 (D-02, D-04).
-- **회차 상태:** 모집 중 → 모집 마감 → 교육 완료. "정원 마감"은 상태가 아니라 남은 자리 0으로 계산한다. 회차 시작 시각이 되면 자동으로 모집 마감되고, 남은 대기는 취소된다 (사유: 회차 시작) (D-01).
-- **중복 신청 금지 범위는 과정 단위다.** 같은 과정의 다른 회차라도 유효 신청(확정·대기)은 1건만 허용한다. 수료한 과정은 다시 신청할 수 없다 (D-03).
-- **정원·삭제 제약:** 정원은 현재 확정 인원보다 작게 줄일 수 없다. 신청이 하나라도 있는 회차·과정은 삭제하지 않는다 (D-02).
-- **수료 처리:** 교육 완료된 회차의 확정 신청만 수료 또는 미수료로 처리한다 (D-05).
-- **신청 상태:** 확정, 대기, 취소, 수료, 미수료.
-
-## 작업 방식
-
-- 과정은 주차별로 진행된다 (요구사항 표의 "주차" 열 참고). 브랜치는 `feature/week<N>-<주제>` 형식을 쓴다 (예: `feature/week1-skeleton`). 기본 브랜치는 `main`이다.
-- 커밋 메시지는 `docs:`, `chore:` 같은 Conventional Commits 접두어에 한국어 설명을 붙인다.
+- 커밋 메시지: Conventional Commits 접두어(`feat:`, `chore:`, `docs:` 등) + 한국어 설명.
+- 브랜치: 기본 브랜치는 `main`. 기능은 `feature/week<N>-<주제>`(예: `feature/week1-skeleton`), 설정·문서는 `chore/<주제>`. 주차는 요구사항 표의 "주차" 열을 따른다.
+- 비밀 정보는 코드와 설정 파일에 쓰지 않는다. 환경 변수와 `.env`(커밋 금지)만 쓰고, 이름은 `.env.example`에 값 없이 추가한다 (NFR-03, NFR-06).
 - 요청 범위 밖의 파일이나 기능은 추가하지 않는다. 필요해 보이면 만들기 전에 제안한다.
 - 테스트 결과는 "통과했다"는 말이 아니라 실제 실행 출력으로 보고한다.
 - 빌드와 테스트는 사람이 자기 터미널에서 직접 돌릴 수 있어야 한다. Gradle 래퍼(`gradlew`, `gradle/wrapper/`)는 커밋한다.
-
-## 팀 규칙
-- 요구사항은 docs/requirements.md를 기준으로 한다 (결정 사항 D-xx 포함)
-- 백엔드 빌드·테스트: cd backend && ./gradlew test
-- 계층 규칙: Controller → Service → Repository. Controller에서 Repository 직접 호출 금지
-- 엔티티를 API 응답으로 그대로 반환하지 않는다 (DTO 사용)
-- 비밀 정보는 코드와 설정 파일에 쓰지 않는다. 환경 변수와 .env(커밋 금지)만 사용
+- 팀원이 AI 없이도 구조와 핵심 파일을 설명할 수 있어야 한다 (NFR-08). 의도가 드러나지 않는 추상화는 피한다.
