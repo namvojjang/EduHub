@@ -11,7 +11,8 @@
 ./gradlew spotlessApply                                     # 포맷 적용 (google-java-format 1.7)
 ```
 
-- 프로필: `dev`(기본, 로컬 PostgreSQL, 접속 정보는 `DB_URL`·`DB_USERNAME`·`DB_PASSWORD` 환경 변수), `test`(DB·JPA·Flyway 자동 설정 제외).
+- 프로필: `dev`(기본, 로컬 PostgreSQL의 `POSTGRES_DB`), `test`(같은 서버의 `POSTGRES_TEST_DB`, 기본 `eduhub_test`). Docker·Testcontainers는 쓰지 않는다.
+- 접속 정보는 `POSTGRES_USER`·`POSTGRES_PASSWORD` 등. 루트 `.env`를 `spring.config.import`로 읽는다. 저장소 테스트(`@DataJpaTest`)는 로컬 DB가 떠 있어야 통과한다.
 - Java 8이다. `var`, record, text block을 쓰지 않는다. Spring Boot 2.7이므로 `javax.*` 패키지를 쓴다(`jakarta.*` 아님).
 
 ## 패키지와 계층 규칙 (NFR-07)

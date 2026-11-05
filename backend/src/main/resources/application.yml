@@ -3,6 +3,9 @@ spring:
     name: eduhub
   profiles:
     default: dev
+  config:
+    # 저장소 루트의 .env(KEY=VALUE)를 설정으로 읽는다. backend/에서 실행하면 ../.env, 루트에서 실행하면 ./.env.
+    import: "optional:file:../.env[.properties],optional:file:./.env[.properties]"
   jpa:
     # NFR-02: 뷰 렌더링 중 지연 로딩으로 생기는 N+1 쿼리를 막는다.
     open-in-view: false

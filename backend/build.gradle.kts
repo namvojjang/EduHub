@@ -17,7 +17,13 @@ repositories {
     mavenCentral()
 }
 
+// Boot 2.7 기본 Flyway(8.5)는 최신 PostgreSQL보다 오래됐다. 9.22.3은 Java 8에서 도는 마지막 계열이다.
+extra["flyway.version"] = "9.22.3"
+
 dependencies {
+    compileOnly("org.projectlombok:lombok")
+    annotationProcessor("org.projectlombok:lombok")
+
     implementation("org.springframework.boot:spring-boot-starter-web")
     implementation("org.springframework.boot:spring-boot-starter-validation")
     implementation("org.springframework.boot:spring-boot-starter-data-jpa")
