@@ -1,0 +1,7 @@
+# 로컬 개발용 PostgreSQL. 접속 정보는 환경 변수로만 받는다 (NFR-03, NFR-06).
+# 필요한 변수 이름은 저장소 루트의 .env.example에 있다.
+spring:
+  datasource:
+    url: ${DB_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}

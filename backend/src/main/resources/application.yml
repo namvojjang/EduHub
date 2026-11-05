@@ -1,0 +1,17 @@
+spring:
+  application:
+    name: eduhub
+  profiles:
+    default: dev
+  jpa:
+    # NFR-02: 뷰 렌더링 중 지연 로딩으로 생기는 N+1 쿼리를 막는다.
+    open-in-view: false
+    hibernate:
+      # NFR-06: 스키마는 Flyway만 바꾼다. Hibernate는 검증만 한다.
+      ddl-auto: validate
+  flyway:
+    locations: classpath:db/migration
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html

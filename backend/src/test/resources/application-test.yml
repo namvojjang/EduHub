@@ -1,0 +1,8 @@
+# 테스트 프로필. 엔티티가 생기기 전까지는 DB 없이 돈다.
+# 3주차 동시성 테스트(NFR-01)부터는 실제 PostgreSQL(Testcontainers)로 바꾼다.
+spring:
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration
+      - org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration
+      - org.springframework.boot.autoconfigure.flyway.FlywayAutoConfiguration
