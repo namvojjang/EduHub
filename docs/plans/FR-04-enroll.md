@@ -105,6 +105,7 @@ T1과 T2는 서로 의존하지 않는다. 같은 파일을 건드리지 않으�
     3. `existsByCourseIdAndEmployeeIdAndStatusIn(courseId, employeeId, Arrays.asList(CONFIRMED, WAITING))`이면 `DuplicateEnrollmentException`
     4. `countBySessionIdAndStatus(sessionId, CONFIRMED) < session.getCapacity()`이면 `Enrollment.confirm`, 아니면 `Enrollment.waiting`
     5. `try { enrollmentRepository.saveAndFlush(e) } catch (DataIntegrityViolationException ex) { throw new DuplicateEnrollmentException(...) }` — 잡은 뒤 같은 트랜잭션에서 다른 쿼리를 하지 않는다.
+       위반한 제약이 `ux_enrollment_course_employee_active`일 때만 변환하고, 다른 무결성 위반(NOT NULL, FK)은 원래 예외를 다시 던진다 (T3 검토 W1). 제약 이름은 원인 사슬의 Hibernate `ConstraintViolationException.getConstraintName()`으로 보고, 없으면 `getMostSpecificCause()` 메시지로 확인한다.
   - 메서드 주석에 FR-04, NFR-01, D-03 참조와 "락은 커밋 때 풀린다"를 적는다.
 
 테스트 (`@ExtendWith(MockitoExtension.class)`, 리포지토리 mock, 회차·과정은 실제 엔티티 + `ReflectionTestUtils`로 id 설정)
@@ -204,6 +205,7 @@ T1과 T2는 서로 의존하지 않는다. 같은 파일을 건드리지 않으�
 |---|---|---|
 | 락 없이 카운트하면 정원 초과 | T3 | 반드시 `findByIdForUpdate`로 회차를 먼저 읽는다. reviewer는 `findById`로 바뀌지 않았는지 본다. T5가 회귀를 잡는다 |
 | 다른 회차 동시 신청은 락이 못 막음 | T1, T3 | 부분 유일 인덱스가 막는다. 예외 변환이 `saveAndFlush`를 감싸야 한다(`save`만 하면 커밋 시점에 터져 변환되지 않는다) |
+| 락 보유 중 course SELECT 1회 추가 | T3 | `session.getCourse().getId()`가 LAZY 프록시를 초기화한다(필드 접근, Hibernate 5). 정합성 문제는 아니다. `join fetch`는 course 행까지 잠가 같은 과정의 회차 신청을 모두 직렬화하므로 쓰지 않는다. T5에서 병목이 보이면 다시 검토한다 (T3 검토 S1) |
 | 유일 인덱스 위반 후 같은 트랜잭션에서 쿼리 | T3 | PostgreSQL은 트랜잭션을 중단 상태로 둔다. catch 안에서는 예외만 던진다 |
 | 커넥션 풀 고갈 | T5 | 100 스레드가 풀(기본 10)을 기다린다. 풀 대기 30초를 넘기면 실패한다. 실패 시 test 프로필의 풀 설정을 확인한다(설정 파일은 개발자가 확인) |
 | 테스트 데이터 잔류 | T1, T5 | 로컬 DB를 공유하므로 매번 새 과정·회차와 고유 직원 ID를 쓴다. 삭제에 기대지 않는다 |
