@@ -52,9 +52,15 @@ export function CourseListPage() {
 
   return (
     <Box sx={{ maxWidth: 960, mx: 'auto', p: 3 }}>
-      <Typography variant="h5" component="h1" gutterBottom>
-        교육과정
-      </Typography>
+      <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1 }}>
+        <Typography variant="h5" component="h1">
+          교육과정
+        </Typography>
+        {/* 인증(NFR-03)이 생기기 전까지는 누구나 관리 화면으로 갈 수 있다. */}
+        <Button size="small" onClick={() => navigate('/admin/courses')}>
+          과정 관리
+        </Button>
+      </Stack>
 
       <Stack component="form" direction="row" spacing={2} sx={{ mb: 2 }} onSubmit={handleSearch}>
         <TextField

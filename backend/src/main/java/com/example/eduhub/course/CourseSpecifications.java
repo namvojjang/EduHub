@@ -13,6 +13,11 @@ public final class CourseSpecifications {
     return isOpen().and(titleContains(keyword)).and(categoryEquals(category));
   }
 
+  /** 관리자 목록 (FR-03): 종료된 과정도 포함한다. */
+  public static Specification<Course> managed(String keyword, String category) {
+    return Specification.where(titleContains(keyword)).and(categoryEquals(category));
+  }
+
   static Specification<Course> isOpen() {
     return (root, query, cb) -> cb.equal(root.get("status"), CourseStatus.OPEN);
   }

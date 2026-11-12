@@ -11,8 +11,11 @@ export interface CourseDetailState {
   error: Error | null;
 }
 
-/** 과정 상세와 회차 목록 (FR-02). id가 바뀌면 다시 불러온다. */
-export function useCourseDetail(id: number): CourseDetailState {
+/**
+ * 과정 상세와 회차 목록 (FR-02). id가 바뀌면 다시 불러온다.
+ * reloadKey를 바꾸면 같은 id라도 다시 불러온다 (관리 화면에서 회차를 바꾼 뒤).
+ */
+export function useCourseDetail(id: number, reloadKey = 0): CourseDetailState {
   const [state, setState] = useState<CourseDetailState>({
     data: null,
     loading: true,
@@ -46,7 +49,7 @@ export function useCourseDetail(id: number): CourseDetailState {
     return () => {
       ignore = true;
     };
-  }, [id]);
+  }, [id, reloadKey]);
 
   return state;
 }

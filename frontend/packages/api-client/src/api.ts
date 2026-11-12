@@ -24,6 +24,45 @@ import { BASE_PATH, COLLECTION_FORMATS, RequestArgs, BaseAPI, RequiredError } fr
 /**
  * 
  * @export
+ * @interface AdminCourseSummaryResponse
+ */
+export interface AdminCourseSummaryResponse {
+    /**
+     * 
+     * @type {number}
+     * @memberof AdminCourseSummaryResponse
+     */
+    'id'?: number;
+    /**
+     * 
+     * @type {string}
+     * @memberof AdminCourseSummaryResponse
+     */
+    'title'?: string;
+    /**
+     * 
+     * @type {string}
+     * @memberof AdminCourseSummaryResponse
+     */
+    'category'?: string;
+    /**
+     * 
+     * @type {string}
+     * @memberof AdminCourseSummaryResponse
+     */
+    'status'?: AdminCourseSummaryResponseStatusEnum;
+}
+
+export const AdminCourseSummaryResponseStatusEnum = {
+    Open: 'OPEN',
+    Closed: 'CLOSED'
+} as const;
+
+export type AdminCourseSummaryResponseStatusEnum = typeof AdminCourseSummaryResponseStatusEnum[keyof typeof AdminCourseSummaryResponseStatusEnum];
+
+/**
+ * 
+ * @export
  * @interface CourseDetailResponse
  */
 export interface CourseDetailResponse {
@@ -75,6 +114,31 @@ export type CourseDetailResponseStatusEnum = typeof CourseDetailResponseStatusEn
 /**
  * 
  * @export
+ * @interface CourseRequest
+ */
+export interface CourseRequest {
+    /**
+     * 
+     * @type {string}
+     * @memberof CourseRequest
+     */
+    'title': string;
+    /**
+     * 
+     * @type {string}
+     * @memberof CourseRequest
+     */
+    'category': string;
+    /**
+     * 
+     * @type {string}
+     * @memberof CourseRequest
+     */
+    'description'?: string;
+}
+/**
+ * 
+ * @export
  * @interface CourseSummaryResponse
  */
 export interface CourseSummaryResponse {
@@ -119,6 +183,37 @@ export interface ErrorResponse {
 /**
  * 
  * @export
+ * @interface PageResponseAdminCourseSummaryResponse
+ */
+export interface PageResponseAdminCourseSummaryResponse {
+    /**
+     * 
+     * @type {Array<AdminCourseSummaryResponse>}
+     * @memberof PageResponseAdminCourseSummaryResponse
+     */
+    'content'?: Array<AdminCourseSummaryResponse>;
+    /**
+     * 
+     * @type {number}
+     * @memberof PageResponseAdminCourseSummaryResponse
+     */
+    'page'?: number;
+    /**
+     * 
+     * @type {number}
+     * @memberof PageResponseAdminCourseSummaryResponse
+     */
+    'size'?: number;
+    /**
+     * 
+     * @type {number}
+     * @memberof PageResponseAdminCourseSummaryResponse
+     */
+    'totalElements'?: number;
+}
+/**
+ * 
+ * @export
  * @interface PageResponseCourseSummaryResponse
  */
 export interface PageResponseCourseSummaryResponse {
@@ -146,6 +241,31 @@ export interface PageResponseCourseSummaryResponse {
      * @memberof PageResponseCourseSummaryResponse
      */
     'totalElements'?: number;
+}
+/**
+ * 
+ * @export
+ * @interface SessionRequest
+ */
+export interface SessionRequest {
+    /**
+     * 
+     * @type {string}
+     * @memberof SessionRequest
+     */
+    'startAt': string;
+    /**
+     * 
+     * @type {string}
+     * @memberof SessionRequest
+     */
+    'place': string;
+    /**
+     * 
+     * @type {number}
+     * @memberof SessionRequest
+     */
+    'capacity': number;
 }
 /**
  * 
@@ -401,6 +521,575 @@ export class CourseApi extends BaseAPI {
      */
     public list(keyword?: string, category?: string, page?: number, size?: number, sort?: Array<string>, options?: AxiosRequestConfig) {
         return CourseApiFp(this.configuration).list(keyword, category, page, size, sort, options).then((request) => request(this.axios, this.basePath));
+    }
+}
+
+
+/**
+ * CourseAdminApi - axios parameter creator
+ * @export
+ */
+export const CourseAdminApiAxiosParamCreator = function (configuration?: Configuration) {
+    return {
+        /**
+         * 
+         * @summary 과정 종료 (목록에서 숨기고 새 회차 등록을 막는다)
+         * @param {number} id 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        closeCourse: async (id: number, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'id' is not null or undefined
+            assertParamExists('closeCourse', 'id', id)
+            const localVarPath = `/api/v1/admin/courses/{id}/close`
+                .replace(`{${"id"}}`, encodeURIComponent(String(id)));
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'POST', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+
+    
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+        /**
+         * 
+         * @summary 회차 모집 마감 (D-01)
+         * @param {number} sessionId 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        closeSession: async (sessionId: number, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'sessionId' is not null or undefined
+            assertParamExists('closeSession', 'sessionId', sessionId)
+            const localVarPath = `/api/v1/admin/sessions/{sessionId}/close`
+                .replace(`{${"sessionId"}}`, encodeURIComponent(String(sessionId)));
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'POST', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+
+    
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+        /**
+         * 
+         * @summary 과정 등록
+         * @param {CourseRequest} courseRequest 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        createCourse: async (courseRequest: CourseRequest, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'courseRequest' is not null or undefined
+            assertParamExists('createCourse', 'courseRequest', courseRequest)
+            const localVarPath = `/api/v1/admin/courses`;
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'POST', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+
+    
+            localVarHeaderParameter['Content-Type'] = 'application/json';
+
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+            localVarRequestOptions.data = serializeDataIfNeeded(courseRequest, localVarRequestOptions, configuration)
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+        /**
+         * 
+         * @summary 회차 등록
+         * @param {number} id 
+         * @param {SessionRequest} sessionRequest 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        createSession: async (id: number, sessionRequest: SessionRequest, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'id' is not null or undefined
+            assertParamExists('createSession', 'id', id)
+            // verify required parameter 'sessionRequest' is not null or undefined
+            assertParamExists('createSession', 'sessionRequest', sessionRequest)
+            const localVarPath = `/api/v1/admin/courses/{id}/sessions`
+                .replace(`{${"id"}}`, encodeURIComponent(String(id)));
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'POST', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+
+    
+            localVarHeaderParameter['Content-Type'] = 'application/json';
+
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+            localVarRequestOptions.data = serializeDataIfNeeded(sessionRequest, localVarRequestOptions, configuration)
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+        /**
+         * 
+         * @summary 관리자 과정 목록 (종료된 과정 포함)
+         * @param {string} [keyword] 제목 키워드
+         * @param {string} [category] 분류
+         * @param {number} [page] Zero-based page index (0..N)
+         * @param {number} [size] The size of the page to be returned
+         * @param {Array<string>} [sort] Sorting criteria in the format: property,(asc|desc). Default sort order is ascending. Multiple sort criteria are supported.
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        listAdminCourses: async (keyword?: string, category?: string, page?: number, size?: number, sort?: Array<string>, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+            const localVarPath = `/api/v1/admin/courses`;
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'GET', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+            if (keyword !== undefined) {
+                localVarQueryParameter['keyword'] = keyword;
+            }
+
+            if (category !== undefined) {
+                localVarQueryParameter['category'] = category;
+            }
+
+            if (page !== undefined) {
+                localVarQueryParameter['page'] = page;
+            }
+
+            if (size !== undefined) {
+                localVarQueryParameter['size'] = size;
+            }
+
+            if (sort) {
+                localVarQueryParameter['sort'] = sort;
+            }
+
+
+    
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+        /**
+         * 
+         * @summary 과정 수정
+         * @param {number} id 
+         * @param {CourseRequest} courseRequest 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        updateCourse: async (id: number, courseRequest: CourseRequest, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'id' is not null or undefined
+            assertParamExists('updateCourse', 'id', id)
+            // verify required parameter 'courseRequest' is not null or undefined
+            assertParamExists('updateCourse', 'courseRequest', courseRequest)
+            const localVarPath = `/api/v1/admin/courses/{id}`
+                .replace(`{${"id"}}`, encodeURIComponent(String(id)));
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'PUT', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+
+    
+            localVarHeaderParameter['Content-Type'] = 'application/json';
+
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+            localVarRequestOptions.data = serializeDataIfNeeded(courseRequest, localVarRequestOptions, configuration)
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+        /**
+         * 
+         * @summary 회차 수정 (모집 중인 회차만)
+         * @param {number} sessionId 
+         * @param {SessionRequest} sessionRequest 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        updateSession: async (sessionId: number, sessionRequest: SessionRequest, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'sessionId' is not null or undefined
+            assertParamExists('updateSession', 'sessionId', sessionId)
+            // verify required parameter 'sessionRequest' is not null or undefined
+            assertParamExists('updateSession', 'sessionRequest', sessionRequest)
+            const localVarPath = `/api/v1/admin/sessions/{sessionId}`
+                .replace(`{${"sessionId"}}`, encodeURIComponent(String(sessionId)));
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'PUT', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+
+    
+            localVarHeaderParameter['Content-Type'] = 'application/json';
+
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+            localVarRequestOptions.data = serializeDataIfNeeded(sessionRequest, localVarRequestOptions, configuration)
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+    }
+};
+
+/**
+ * CourseAdminApi - functional programming interface
+ * @export
+ */
+export const CourseAdminApiFp = function(configuration?: Configuration) {
+    const localVarAxiosParamCreator = CourseAdminApiAxiosParamCreator(configuration)
+    return {
+        /**
+         * 
+         * @summary 과정 종료 (목록에서 숨기고 새 회차 등록을 막는다)
+         * @param {number} id 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async closeCourse(id: number, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<CourseDetailResponse>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.closeCourse(id, options);
+            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+        },
+        /**
+         * 
+         * @summary 회차 모집 마감 (D-01)
+         * @param {number} sessionId 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async closeSession(sessionId: number, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<SessionResponse>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.closeSession(sessionId, options);
+            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+        },
+        /**
+         * 
+         * @summary 과정 등록
+         * @param {CourseRequest} courseRequest 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async createCourse(courseRequest: CourseRequest, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<CourseDetailResponse>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.createCourse(courseRequest, options);
+            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+        },
+        /**
+         * 
+         * @summary 회차 등록
+         * @param {number} id 
+         * @param {SessionRequest} sessionRequest 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async createSession(id: number, sessionRequest: SessionRequest, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<SessionResponse>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.createSession(id, sessionRequest, options);
+            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+        },
+        /**
+         * 
+         * @summary 관리자 과정 목록 (종료된 과정 포함)
+         * @param {string} [keyword] 제목 키워드
+         * @param {string} [category] 분류
+         * @param {number} [page] Zero-based page index (0..N)
+         * @param {number} [size] The size of the page to be returned
+         * @param {Array<string>} [sort] Sorting criteria in the format: property,(asc|desc). Default sort order is ascending. Multiple sort criteria are supported.
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async listAdminCourses(keyword?: string, category?: string, page?: number, size?: number, sort?: Array<string>, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<PageResponseAdminCourseSummaryResponse>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.listAdminCourses(keyword, category, page, size, sort, options);
+            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+        },
+        /**
+         * 
+         * @summary 과정 수정
+         * @param {number} id 
+         * @param {CourseRequest} courseRequest 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async updateCourse(id: number, courseRequest: CourseRequest, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<CourseDetailResponse>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.updateCourse(id, courseRequest, options);
+            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+        },
+        /**
+         * 
+         * @summary 회차 수정 (모집 중인 회차만)
+         * @param {number} sessionId 
+         * @param {SessionRequest} sessionRequest 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async updateSession(sessionId: number, sessionRequest: SessionRequest, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<SessionResponse>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.updateSession(sessionId, sessionRequest, options);
+            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+        },
+    }
+};
+
+/**
+ * CourseAdminApi - factory interface
+ * @export
+ */
+export const CourseAdminApiFactory = function (configuration?: Configuration, basePath?: string, axios?: AxiosInstance) {
+    const localVarFp = CourseAdminApiFp(configuration)
+    return {
+        /**
+         * 
+         * @summary 과정 종료 (목록에서 숨기고 새 회차 등록을 막는다)
+         * @param {number} id 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        closeCourse(id: number, options?: any): AxiosPromise<CourseDetailResponse> {
+            return localVarFp.closeCourse(id, options).then((request) => request(axios, basePath));
+        },
+        /**
+         * 
+         * @summary 회차 모집 마감 (D-01)
+         * @param {number} sessionId 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        closeSession(sessionId: number, options?: any): AxiosPromise<SessionResponse> {
+            return localVarFp.closeSession(sessionId, options).then((request) => request(axios, basePath));
+        },
+        /**
+         * 
+         * @summary 과정 등록
+         * @param {CourseRequest} courseRequest 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        createCourse(courseRequest: CourseRequest, options?: any): AxiosPromise<CourseDetailResponse> {
+            return localVarFp.createCourse(courseRequest, options).then((request) => request(axios, basePath));
+        },
+        /**
+         * 
+         * @summary 회차 등록
+         * @param {number} id 
+         * @param {SessionRequest} sessionRequest 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        createSession(id: number, sessionRequest: SessionRequest, options?: any): AxiosPromise<SessionResponse> {
+            return localVarFp.createSession(id, sessionRequest, options).then((request) => request(axios, basePath));
+        },
+        /**
+         * 
+         * @summary 관리자 과정 목록 (종료된 과정 포함)
+         * @param {string} [keyword] 제목 키워드
+         * @param {string} [category] 분류
+         * @param {number} [page] Zero-based page index (0..N)
+         * @param {number} [size] The size of the page to be returned
+         * @param {Array<string>} [sort] Sorting criteria in the format: property,(asc|desc). Default sort order is ascending. Multiple sort criteria are supported.
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        listAdminCourses(keyword?: string, category?: string, page?: number, size?: number, sort?: Array<string>, options?: any): AxiosPromise<PageResponseAdminCourseSummaryResponse> {
+            return localVarFp.listAdminCourses(keyword, category, page, size, sort, options).then((request) => request(axios, basePath));
+        },
+        /**
+         * 
+         * @summary 과정 수정
+         * @param {number} id 
+         * @param {CourseRequest} courseRequest 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        updateCourse(id: number, courseRequest: CourseRequest, options?: any): AxiosPromise<CourseDetailResponse> {
+            return localVarFp.updateCourse(id, courseRequest, options).then((request) => request(axios, basePath));
+        },
+        /**
+         * 
+         * @summary 회차 수정 (모집 중인 회차만)
+         * @param {number} sessionId 
+         * @param {SessionRequest} sessionRequest 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        updateSession(sessionId: number, sessionRequest: SessionRequest, options?: any): AxiosPromise<SessionResponse> {
+            return localVarFp.updateSession(sessionId, sessionRequest, options).then((request) => request(axios, basePath));
+        },
+    };
+};
+
+/**
+ * CourseAdminApi - object-oriented interface
+ * @export
+ * @class CourseAdminApi
+ * @extends {BaseAPI}
+ */
+export class CourseAdminApi extends BaseAPI {
+    /**
+     * 
+     * @summary 과정 종료 (목록에서 숨기고 새 회차 등록을 막는다)
+     * @param {number} id 
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof CourseAdminApi
+     */
+    public closeCourse(id: number, options?: AxiosRequestConfig) {
+        return CourseAdminApiFp(this.configuration).closeCourse(id, options).then((request) => request(this.axios, this.basePath));
+    }
+
+    /**
+     * 
+     * @summary 회차 모집 마감 (D-01)
+     * @param {number} sessionId 
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof CourseAdminApi
+     */
+    public closeSession(sessionId: number, options?: AxiosRequestConfig) {
+        return CourseAdminApiFp(this.configuration).closeSession(sessionId, options).then((request) => request(this.axios, this.basePath));
+    }
+
+    /**
+     * 
+     * @summary 과정 등록
+     * @param {CourseRequest} courseRequest 
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof CourseAdminApi
+     */
+    public createCourse(courseRequest: CourseRequest, options?: AxiosRequestConfig) {
+        return CourseAdminApiFp(this.configuration).createCourse(courseRequest, options).then((request) => request(this.axios, this.basePath));
+    }
+
+    /**
+     * 
+     * @summary 회차 등록
+     * @param {number} id 
+     * @param {SessionRequest} sessionRequest 
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof CourseAdminApi
+     */
+    public createSession(id: number, sessionRequest: SessionRequest, options?: AxiosRequestConfig) {
+        return CourseAdminApiFp(this.configuration).createSession(id, sessionRequest, options).then((request) => request(this.axios, this.basePath));
+    }
+
+    /**
+     * 
+     * @summary 관리자 과정 목록 (종료된 과정 포함)
+     * @param {string} [keyword] 제목 키워드
+     * @param {string} [category] 분류
+     * @param {number} [page] Zero-based page index (0..N)
+     * @param {number} [size] The size of the page to be returned
+     * @param {Array<string>} [sort] Sorting criteria in the format: property,(asc|desc). Default sort order is ascending. Multiple sort criteria are supported.
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof CourseAdminApi
+     */
+    public listAdminCourses(keyword?: string, category?: string, page?: number, size?: number, sort?: Array<string>, options?: AxiosRequestConfig) {
+        return CourseAdminApiFp(this.configuration).listAdminCourses(keyword, category, page, size, sort, options).then((request) => request(this.axios, this.basePath));
+    }
+
+    /**
+     * 
+     * @summary 과정 수정
+     * @param {number} id 
+     * @param {CourseRequest} courseRequest 
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof CourseAdminApi
+     */
+    public updateCourse(id: number, courseRequest: CourseRequest, options?: AxiosRequestConfig) {
+        return CourseAdminApiFp(this.configuration).updateCourse(id, courseRequest, options).then((request) => request(this.axios, this.basePath));
+    }
+
+    /**
+     * 
+     * @summary 회차 수정 (모집 중인 회차만)
+     * @param {number} sessionId 
+     * @param {SessionRequest} sessionRequest 
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof CourseAdminApi
+     */
+    public updateSession(sessionId: number, sessionRequest: SessionRequest, options?: AxiosRequestConfig) {
+        return CourseAdminApiFp(this.configuration).updateSession(sessionId, sessionRequest, options).then((request) => request(this.axios, this.basePath));
     }
 }
 

@@ -125,6 +125,24 @@ class CourseSearchRepositoryTest {
         .containsExactly(earlier.getId(), later.getId());
   }
 
+  @Test
+  void adminListIncludesClosedCourses() {
+    String category = uniqueCategory();
+    Course open = save(Course.create("열린 과정", category, null));
+    Course closed = Course.create("종료된 과정", category, null);
+    closed.close();
+    save(closed);
+    em.flush();
+    em.clear();
+
+    Page<Course> result =
+        courseRepository.findAll(CourseSpecifications.managed(null, category), FIRST_PAGE);
+
+    assertThat(result.getContent())
+        .extracting(Course::getId)
+        .containsExactlyInAnyOrder(open.getId(), closed.getId());
+  }
+
   private Page<Course> search(String keyword, String category) {
     em.flush();
     em.clear();
