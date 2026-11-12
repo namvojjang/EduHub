@@ -20,6 +20,7 @@ import {
   Typography,
 } from '@mui/material';
 import { FormEvent, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { CATEGORIES } from '../constants/categories';
 import { useCourses } from '../hooks/useCourses';
 
@@ -27,6 +28,7 @@ const PAGE_SIZE_OPTIONS = [10, 20, 50];
 
 /** 과정 목록 화면 (FR-01). 데이터는 useCourses로만 가져온다. */
 export function CourseListPage() {
+  const navigate = useNavigate();
   const [keywordInput, setKeywordInput] = useState('');
   const [keyword, setKeyword] = useState('');
   const [category, setCategory] = useState('');
@@ -112,7 +114,12 @@ export function CourseListPage() {
               </TableRow>
             ) : (
               courses.map((course) => (
-                <TableRow key={course.id} hover>
+                <TableRow
+                  key={course.id}
+                  hover
+                  sx={{ cursor: 'pointer' }}
+                  onClick={() => navigate(`/courses/${course.id}`)}
+                >
                   <TableCell>{course.title}</TableCell>
                   <TableCell>{course.category}</TableCell>
                 </TableRow>

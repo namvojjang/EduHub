@@ -24,6 +24,57 @@ import { BASE_PATH, COLLECTION_FORMATS, RequestArgs, BaseAPI, RequiredError } fr
 /**
  * 
  * @export
+ * @interface CourseDetailResponse
+ */
+export interface CourseDetailResponse {
+    /**
+     * 
+     * @type {number}
+     * @memberof CourseDetailResponse
+     */
+    'id'?: number;
+    /**
+     * 
+     * @type {string}
+     * @memberof CourseDetailResponse
+     */
+    'title'?: string;
+    /**
+     * 
+     * @type {string}
+     * @memberof CourseDetailResponse
+     */
+    'category'?: string;
+    /**
+     * 
+     * @type {string}
+     * @memberof CourseDetailResponse
+     */
+    'description'?: string;
+    /**
+     * 
+     * @type {string}
+     * @memberof CourseDetailResponse
+     */
+    'status'?: CourseDetailResponseStatusEnum;
+    /**
+     * 
+     * @type {Array<SessionResponse>}
+     * @memberof CourseDetailResponse
+     */
+    'sessions'?: Array<SessionResponse>;
+}
+
+export const CourseDetailResponseStatusEnum = {
+    Open: 'OPEN',
+    Closed: 'CLOSED'
+} as const;
+
+export type CourseDetailResponseStatusEnum = typeof CourseDetailResponseStatusEnum[keyof typeof CourseDetailResponseStatusEnum];
+
+/**
+ * 
+ * @export
  * @interface CourseSummaryResponse
  */
 export interface CourseSummaryResponse {
@@ -96,6 +147,58 @@ export interface PageResponseCourseSummaryResponse {
      */
     'totalElements'?: number;
 }
+/**
+ * 
+ * @export
+ * @interface SessionResponse
+ */
+export interface SessionResponse {
+    /**
+     * 
+     * @type {number}
+     * @memberof SessionResponse
+     */
+    'id'?: number;
+    /**
+     * 
+     * @type {string}
+     * @memberof SessionResponse
+     */
+    'startAt'?: string;
+    /**
+     * 
+     * @type {string}
+     * @memberof SessionResponse
+     */
+    'place'?: string;
+    /**
+     * 
+     * @type {number}
+     * @memberof SessionResponse
+     */
+    'capacity'?: number;
+    /**
+     * 
+     * @type {number}
+     * @memberof SessionResponse
+     */
+    'remainingSeats'?: number;
+    /**
+     * 
+     * @type {string}
+     * @memberof SessionResponse
+     */
+    'status'?: SessionResponseStatusEnum;
+}
+
+export const SessionResponseStatusEnum = {
+    Recruiting: 'RECRUITING',
+    Closed: 'CLOSED',
+    Completed: 'COMPLETED'
+} as const;
+
+export type SessionResponseStatusEnum = typeof SessionResponseStatusEnum[keyof typeof SessionResponseStatusEnum];
+
 
 /**
  * CourseApi - axios parameter creator
@@ -209,7 +312,7 @@ export const CourseApiFp = function(configuration?: Configuration) {
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async detail(id: number, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<void>> {
+        async detail(id: number, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<CourseDetailResponse>> {
             const localVarAxiosArgs = await localVarAxiosParamCreator.detail(id, options);
             return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
         },
@@ -245,7 +348,7 @@ export const CourseApiFactory = function (configuration?: Configuration, basePat
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        detail(id: number, options?: any): AxiosPromise<void> {
+        detail(id: number, options?: any): AxiosPromise<CourseDetailResponse> {
             return localVarFp.detail(id, options).then((request) => request(axios, basePath));
         },
         /**

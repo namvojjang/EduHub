@@ -21,3 +21,6 @@
 #docs/*.md
 # Then explicitly reverse the ignore rule for a single file:
 #!docs/README.md
+
+# 저장소 push 스크립트는 쓰지 않는다
+git_push.sh

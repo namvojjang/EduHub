@@ -39,6 +39,11 @@ public class CourseController {
   }
 
   @Operation(summary = "과정 상세와 회차 목록 조회")
+  // springdoc 1.x는 @ApiResponse를 하나라도 직접 달면 200을 자동으로 만들지 않는다. 200도 명시한다.
+  @ApiResponse(
+      responseCode = "200",
+      description = "과정 상세",
+      content = @Content(schema = @Schema(implementation = CourseDetailResponse.class)))
   @ApiResponse(
       responseCode = "404",
       description = "과정이 없음",
