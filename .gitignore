@@ -40,3 +40,8 @@ $RECYCLE.BIN/
 .env
 .env.*
 !.env.example
+
+# ===== Claude Code =====
+# 팀 공용 설정(.claude/settings.json)은 커밋하고, 개인 설정과 워크트리는 커밋하지 않는다.
+.claude/settings.local.json
+.claude/worktrees/
