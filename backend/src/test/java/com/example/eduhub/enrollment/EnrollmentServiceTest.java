@@ -6,6 +6,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.inOrder;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -371,6 +372,83 @@ class EnrollmentServiceTest {
     inOrder.verify(enrollmentRepository).findById(100L);
   }
 
+  @Test
+  void cancelWhenOverCapacityDoesNotPromote() {
+    ReflectionTestUtils.setField(session, "capacity", 3);
+    Enrollment confirmed = enrollment(100L, EMPLOYEE_ID, EnrollmentStatus.CONFIRMED);
+    Enrollment first = enrollment(101L, 8L, EnrollmentStatus.WAITING);
+    givenCancelTarget(confirmed);
+    givenLenientFirstWaiting(first);
+    when(enrollmentRepository.countBySessionIdAndStatus(SESSION_ID, EnrollmentStatus.CONFIRMED))
+        .thenReturn(4L);
+
+    service.cancel(EMPLOYEE_ID, 100L);
+
+    assertThat(confirmed.getStatus()).isEqualTo(EnrollmentStatus.CANCELLED);
+    assertThat(first.getStatus()).isEqualTo(EnrollmentStatus.WAITING);
+    verify(enrollmentRepository, never())
+        .findFirstBySessionIdAndStatusOrderByAppliedAtAscIdAsc(any(), any());
+  }
+
+  @Test
+  void cancelWhenConfirmedEqualsCapacityAfterCancelDoesNotPromote() {
+    ReflectionTestUtils.setField(session, "capacity", 4);
+    Enrollment confirmed = enrollment(100L, EMPLOYEE_ID, EnrollmentStatus.CONFIRMED);
+    Enrollment first = enrollment(101L, 8L, EnrollmentStatus.WAITING);
+    givenCancelTarget(confirmed);
+    givenLenientFirstWaiting(first);
+    when(enrollmentRepository.countBySessionIdAndStatus(SESSION_ID, EnrollmentStatus.CONFIRMED))
+        .thenReturn(4L);
+
+    service.cancel(EMPLOYEE_ID, 100L);
+
+    assertThat(first.getStatus()).isEqualTo(EnrollmentStatus.WAITING);
+    verify(enrollmentRepository, never())
+        .findFirstBySessionIdAndStatusOrderByAppliedAtAscIdAsc(any(), any());
+  }
+
+  @Test
+  void cancelAtFullCapacityPromotesOne() {
+    ReflectionTestUtils.setField(session, "capacity", 5);
+    Enrollment confirmed = enrollment(100L, EMPLOYEE_ID, EnrollmentStatus.CONFIRMED);
+    Enrollment first = enrollment(101L, 8L, EnrollmentStatus.WAITING);
+    givenCancelTarget(confirmed);
+    givenFirstWaiting(first);
+    when(enrollmentRepository.countBySessionIdAndStatus(SESSION_ID, EnrollmentStatus.CONFIRMED))
+        .thenReturn(4L);
+
+    service.cancel(EMPLOYEE_ID, 100L);
+
+    assertThat(first.getStatus()).isEqualTo(EnrollmentStatus.CONFIRMED);
+    assertThat(first.isPromoted()).isTrue();
+  }
+
+  @Test
+  void promoteFirstWaitingFlushesBeforeCounting() {
+    when(enrollmentRepository.countBySessionIdAndStatus(SESSION_ID, EnrollmentStatus.CONFIRMED))
+        .thenReturn(2L);
+
+    boolean promoted = service.promoteFirstWaiting(session, LocalDateTime.now());
+
+    assertThat(promoted).isFalse();
+    InOrder inOrder = inOrder(enrollmentRepository);
+    inOrder.verify(enrollmentRepository).flush();
+    inOrder
+        .verify(enrollmentRepository)
+        .countBySessionIdAndStatus(SESSION_ID, EnrollmentStatus.CONFIRMED);
+  }
+
+  @Test
+  void cancelOthersEnrollmentOnStartedSessionIsNotFound() {
+    Enrollment others = enrollment(100L, 99L, EnrollmentStatus.CONFIRMED);
+    ReflectionTestUtils.setField(session, "startAt", LocalDateTime.now().minusMinutes(1));
+    givenCancelTarget(others);
+
+    assertThatThrownBy(() -> service.cancel(EMPLOYEE_ID, 100L))
+        .isInstanceOf(EnrollmentNotFoundException.class);
+    assertThat(others.getStatus()).isEqualTo(EnrollmentStatus.CONFIRMED);
+  }
+
   /** 대기 상태는 팩터리로, 그 밖의 상태는 팩터리와 상태 메서드로 만든다. id는 리플렉션으로 넣는다. */
   private Enrollment enrollment(Long id, Long employeeId, EnrollmentStatus status) {
     LocalDateTime now = LocalDateTime.now();
@@ -397,6 +475,15 @@ class EnrollmentServiceTest {
   private void givenFirstWaiting(Enrollment first) {
     when(enrollmentRepository.findFirstBySessionIdAndStatusOrderByAppliedAtAscIdAsc(
             SESSION_ID, EnrollmentStatus.WAITING))
+        .thenReturn(Optional.of(first));
+  }
+
+  /** 호출되지 않아야 하는 조회를 스텁한다. 호출되면 승급이 일어나 단언이 실패한다. */
+  private void givenLenientFirstWaiting(Enrollment first) {
+    lenient()
+        .when(
+            enrollmentRepository.findFirstBySessionIdAndStatusOrderByAppliedAtAscIdAsc(
+                SESSION_ID, EnrollmentStatus.WAITING))
         .thenReturn(Optional.of(first));
   }
 

@@ -6,6 +6,7 @@ import com.example.eduhub.course.CourseSessionRepository;
 import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.Locale;
+import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.hibernate.exception.ConstraintViolationException;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -50,7 +51,7 @@ public class EnrollmentService {
     long waiting =
         enrollmentRepository.countBySessionIdAndStatus(sessionId, EnrollmentStatus.WAITING);
     // D-02·D-04: 대기자를 앞지르지 않는다. 정원이 늘어도 대기자가 있으면 새 신청은 대기다.
-    // 자동 승급이 구현되면 자리가 나는 즉시 대기자가 승급하므로 waiting == 0 조건은 항상 참이 된다.
+    // 정원 증가 시 자동 승급(D-02)이 생기기 전까지 이 조건이 새 신청의 대기자 추월을 막는다.
     Enrollment enrollment =
         confirmed < session.getCapacity() && waiting == 0
             ? Enrollment.confirm(session, employeeId, now)
@@ -109,16 +110,33 @@ public class EnrollmentService {
     boolean wasConfirmed = enrollment.getStatus() == EnrollmentStatus.CONFIRMED;
     enrollment.cancel();
     if (wasConfirmed) {
-      promoteFirstWaiting(sessionId, now);
+      promoteFirstWaiting(session, now);
     }
     return EnrollmentResponse.from(enrollment, null);
   }
 
-  /** 회차 락을 쥔 호출자만 부른다. 정원 증가 승급(D-02, 후속 작업)에서 재사용한다. */
-  void promoteFirstWaiting(Long sessionId, LocalDateTime now) {
-    enrollmentRepository
-        .findFirstBySessionIdAndStatusOrderByAppliedAtAscIdAsc(sessionId, EnrollmentStatus.WAITING)
-        .ifPresent(e -> e.promote(now));
+  /**
+   * 자리가 있으면 대기 1순위를 승급하고 true를 반환한다. 회차 락을 쥔 호출자만 부른다.
+   *
+   * <p>자동 flush에 기대지 않고 명시적으로 flush한 뒤 확정 수를 센다. 호출자의 변경과 무관하게 맞아야 정원 증가 후속 작업(D-02)에서 반복 호출로 재사용할
+   * 수 있다. "취소 전 확정 수 - 1"로 계산하면 취소 경로에서만 맞으므로 쓰지 않는다.
+   */
+  boolean promoteFirstWaiting(CourseSession lockedSession, LocalDateTime now) {
+    enrollmentRepository.flush();
+    Long sessionId = lockedSession.getId();
+    long confirmed =
+        enrollmentRepository.countBySessionIdAndStatus(sessionId, EnrollmentStatus.CONFIRMED);
+    if (confirmed >= lockedSession.getCapacity()) {
+      return false;
+    }
+    Optional<Enrollment> first =
+        enrollmentRepository.findFirstBySessionIdAndStatusOrderByAppliedAtAscIdAsc(
+            sessionId, EnrollmentStatus.WAITING);
+    if (!first.isPresent()) {
+      return false;
+    }
+    first.get().promote(now);
+    return true;
   }
 
   /** 대기 순번 = 앞선 대기 수 + 1. 대기가 아니면 null (FR-05, D-04). */
