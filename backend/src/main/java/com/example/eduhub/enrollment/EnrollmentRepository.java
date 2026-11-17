@@ -9,9 +9,13 @@ import org.springframework.data.repository.query.Param;
 
 public interface EnrollmentRepository extends JpaRepository<Enrollment, Long> {
 
-  /** 취소 때 락 전에 회차 ID만 읽는다. 엔티티를 영속성 컨텍스트에 올리지 않기 위해서다 (설계명세 6.2). */
-  @Query("select e.session.id from Enrollment e where e.id = :id")
-  Optional<Long> findSessionIdById(@Param("id") Long id);
+  /**
+   * 취소 때 락 전에 본인 신청의 회차 ID만 읽는다. 엔티티를 영속성 컨텍스트에 올리지 않고, 남의 신청이면 비어 있어 회차 락을 잡지 않는다 (설계명세 6.2,
+   * NFR-03).
+   */
+  @Query("select e.session.id from Enrollment e where e.id = :id and e.employeeId = :employeeId")
+  Optional<Long> findSessionIdByIdAndEmployeeId(
+      @Param("id") Long id, @Param("employeeId") Long employeeId);
 
   /** 대기 순번 = 이 값 + 1. 같은 회차 WAITING 중 (appliedAt, id)가 앞선 수 (FR-05, D-04, 설계명세 Q1). */
   @Query(

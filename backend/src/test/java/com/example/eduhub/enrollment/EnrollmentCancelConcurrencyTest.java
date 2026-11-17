@@ -176,6 +176,25 @@ class EnrollmentCancelConcurrencyTest {
     assertThat(promotedCount(session)).as("승급 수, " + message).isEqualTo(0);
   }
 
+  /** 시나리오 7: 정원을 늘린 뒤 확정을 하나 취소하면 빈자리 3개만큼 대기 앞 3명이 모두 승급한다. 동시 실행이 아니다. */
+  @Test
+  void cancelAfterCapacityGrowthPromotesAllSeats() {
+    CourseSession session = newSession(newCourse(), 2);
+    List<Applicant> confirmed = applySequentially(session, 2);
+    List<Applicant> waiting = applySequentially(session, 3);
+
+    courseAdminService.updateSession(
+        session.getId(), new SessionRequest(LocalDateTime.now().plusDays(1), "테스트실", 4));
+    enrollmentService.cancel(confirmed.get(0).employeeId, confirmed.get(0).enrollmentId);
+
+    String message = state(session);
+    assertThat(confirmedCount(session)).as(message).isEqualTo(4);
+    assertThat(waitingCount(session)).as(message).isEqualTo(0);
+    assertThat(promotedConfirmedIds(session))
+        .as("승급된 3명은 원래 대기 앞 3명, " + message)
+        .isEqualTo(enrollmentIds(waiting.subList(0, 3)));
+  }
+
   // ---------- 도우미 ----------
 
   private static class Applicant {

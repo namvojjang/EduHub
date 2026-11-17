@@ -190,12 +190,16 @@ class EnrollmentRepositoryTest {
   }
 
   @Test
-  void findSessionIdByIdReturnsSessionId() {
+  void findSessionIdByIdAndEmployeeIdReturnsSessionIdOnlyForOwner() {
     CourseSession session = newSession(newCourse());
     Enrollment e = saveWaiting(session, NOW);
+    Long owner = e.getEmployeeId();
 
-    assertThat(enrollmentRepository.findSessionIdById(e.getId())).contains(session.getId());
-    assertThat(enrollmentRepository.findSessionIdById(Long.MAX_VALUE)).isEmpty();
+    assertThat(enrollmentRepository.findSessionIdByIdAndEmployeeId(e.getId(), owner))
+        .contains(session.getId());
+    assertThat(enrollmentRepository.findSessionIdByIdAndEmployeeId(e.getId(), owner + 1)).isEmpty();
+    assertThat(enrollmentRepository.findSessionIdByIdAndEmployeeId(Long.MAX_VALUE, owner))
+        .isEmpty();
   }
 
   @Test

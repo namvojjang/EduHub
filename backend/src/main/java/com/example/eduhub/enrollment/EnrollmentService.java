@@ -82,14 +82,14 @@ public class EnrollmentService {
   }
 
   /**
-   * 신청 취소와 대기 1순위 자동 승급 (FR-06, D-04, NFR-01).
+   * 신청 취소와 빈자리만큼 대기 순서대로 자동 승급 (FR-06, D-04, NFR-01).
    *
    * <p>순서가 중요하다. 락 전에 엔티티를 읽으면 낡은 상태로 이중 승급한다. 그래서 회차 ID만 읽고, 회차 락을 잡은 뒤에 신청 엔티티를 읽는다.
    */
   public EnrollmentResponse cancel(Long employeeId, Long enrollmentId) {
     Long sessionId =
         enrollmentRepository
-            .findSessionIdById(enrollmentId)
+            .findSessionIdByIdAndEmployeeId(enrollmentId, employeeId)
             .orElseThrow(() -> new EnrollmentNotFoundException(enrollmentId));
     CourseSession session =
         courseSessionRepository
@@ -100,6 +100,7 @@ public class EnrollmentService {
         enrollmentRepository
             .findById(enrollmentId)
             .orElseThrow(() -> new EnrollmentNotFoundException(enrollmentId));
+    // 방어용: 1단계에서 본인 확인을 했고 employee_id는 바뀌지 않는다.
     if (!employeeId.equals(enrollment.getEmployeeId())) {
       throw new EnrollmentNotFoundException(enrollmentId);
     }
@@ -110,33 +111,37 @@ public class EnrollmentService {
     boolean wasConfirmed = enrollment.getStatus() == EnrollmentStatus.CONFIRMED;
     enrollment.cancel();
     if (wasConfirmed) {
-      promoteFirstWaiting(session, now);
+      promoteWaitingWhileSeatsAvailable(session, now);
     }
     return EnrollmentResponse.from(enrollment, null);
   }
 
   /**
-   * 자리가 있으면 대기 1순위를 승급하고 true를 반환한다. 회차 락을 쥔 호출자만 부른다.
+   * 빈자리가 있는 동안 대기 순서대로 승급하고, 승급한 인원 수를 반환한다. 회차 락을 쥔 호출자만 부른다. D-02 정원 증가 후속 작업에서도 그대로 쓴다.
    *
-   * <p>자동 flush에 기대지 않고 명시적으로 flush한 뒤 확정 수를 센다. 호출자의 변경과 무관하게 맞아야 정원 증가 후속 작업(D-02)에서 반복 호출로 재사용할
-   * 수 있다. "취소 전 확정 수 - 1"로 계산하면 취소 경로에서만 맞으므로 쓰지 않는다.
+   * <p>반복마다 flush한 뒤 확정 수를 다시 센다. 지금 설정(FlushMode AUTO)에서는 Hibernate가 같은 테이블 JPQL 전에 자동 flush하므로
+   * 결과가 같지만, 명시적 flush는 그 설정이나 호출자의 미반영 변경과 무관하게 맞게 하는 방어 코드다(설계명세 6.2). 지우지 말 것. "취소 전 확정 수 - 1"로
+   * 계산하면 취소 경로에서만 맞으므로 쓰지 않는다.
    */
-  boolean promoteFirstWaiting(CourseSession lockedSession, LocalDateTime now) {
-    enrollmentRepository.flush();
+  int promoteWaitingWhileSeatsAvailable(CourseSession lockedSession, LocalDateTime now) {
     Long sessionId = lockedSession.getId();
-    long confirmed =
-        enrollmentRepository.countBySessionIdAndStatus(sessionId, EnrollmentStatus.CONFIRMED);
-    if (confirmed >= lockedSession.getCapacity()) {
-      return false;
+    int promoted = 0;
+    while (true) {
+      enrollmentRepository.flush();
+      long confirmed =
+          enrollmentRepository.countBySessionIdAndStatus(sessionId, EnrollmentStatus.CONFIRMED);
+      if (confirmed >= lockedSession.getCapacity()) {
+        return promoted;
+      }
+      Optional<Enrollment> first =
+          enrollmentRepository.findFirstBySessionIdAndStatusOrderByAppliedAtAscIdAsc(
+              sessionId, EnrollmentStatus.WAITING);
+      if (!first.isPresent()) {
+        return promoted;
+      }
+      first.get().promote(now);
+      promoted++;
     }
-    Optional<Enrollment> first =
-        enrollmentRepository.findFirstBySessionIdAndStatusOrderByAppliedAtAscIdAsc(
-            sessionId, EnrollmentStatus.WAITING);
-    if (!first.isPresent()) {
-      return false;
-    }
-    first.get().promote(now);
-    return true;
   }
 
   /** 대기 순번 = 앞선 대기 수 + 1. 대기가 아니면 null (FR-05, D-04). */
