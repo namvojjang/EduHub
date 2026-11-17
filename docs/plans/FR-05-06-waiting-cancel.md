@@ -246,7 +246,7 @@ Optional<Enrollment> findFirstBySessionIdAndStatusOrderByAppliedAtAscIdAsc(
 | 유일 인덱스 위반 뒤 쿼리 | T3 | `apply`의 순번 계산은 `saveAndFlush` try 밖에서 한다. catch 안에서는 예외만 던진다 |
 | 응답 계약 변경 | T3, T4, T6 | 필드 추가만 한다. 클라이언트 재생성으로 반영한다 |
 | 조회 순번의 일시적 어긋남 | T3 | `get`은 락 없는 조회 시점 값(설계명세 6.4). 허용 |
-| 관리자 정원 변경과 경합, 증원 시 미승급 | 범위 밖 (Q2) | PR 위험 목록에 적는다. 후속 작업은 회차 락 + `promoteFirstWaiting`을 false까지 반복 |
+| 관리자 정원 변경과 경합, 증원 시 미승급 | 범위 밖 (Q2) | PR 위험 목록에 적는다. 후속 작업은 enrollment 패키지의 public `@Transactional` 진입점에서 회차 락을 잡고 `promoteWaitingWhileSeatsAvailable`을 한 번 호출 |
 | 정원 축소 후 무조건 승급 (실험 B 검토 W1) | T3 | 승급 전 확정 < 정원 확인(명시적 flush 후 카운트). 정원 하한 검사(D-02)는 후속 작업 |
 | 단위 테스트로는 락 전 엔티티 로딩을 못 잡음 (S1) | T5 | T5-2(같은 신청 동시 취소)를 두고, `cancel` 1단계를 `findById`로 바꿔 실패하는지 확인한다 |
 | 다른 직원 + 시작된 회차의 검사 순서 (S3) | T3 | 404가 409보다 먼저인지 단위 테스트 추가(T5 전, W1 커밋에 포함) |
@@ -254,3 +254,14 @@ Optional<Enrollment> findFirstBySessionIdAndStatusOrderByAppliedAtAscIdAsc(
 | 시작 후 남은 대기 | 범위 밖 (D-01) | 자동 마감 작업 전까지 `WAITING`으로 남는다. PR에 적는다 |
 | 커넥션 풀 | T5 | 100 스레드 + 풀 10. FR-04 테스트와 같은 조건이라 문제없을 것으로 본다. 실패 시 풀 대기 시간을 먼저 확인한다 |
 | 여러 계층·3개 이상 파일 | T3, T4 | 각 작업 diff는 수백 줄 이내로 예상한다. 계획 승인을 절차 5의 지시로 본다. 예상보다 커지면 멈추고 보고한다 |
+
+---
+
+## 최종 검토 반영 (2026-11-17, 개발자 결정: 제안 1·3·4·5·6 반영, 2는 후속)
+
+- 제안 1 (`fix:`): `EnrollmentRepository.findSessionIdByIdAndEmployeeId`로 락 전 조회에 본인 조건을 넣어, 남의 신청·없는 신청은 락 없이 404. 기존 `findSessionIdById`는 사용처가 없으면 지운다. 테스트: 남의 신청 취소 시 `findByIdForUpdate` `never()`, 리포지토리 테스트(본인/남).
+- 제안 4 (`fix:`): `promoteFirstWaiting` → `int promoteWaitingWhileSeatsAvailable(CourseSession, LocalDateTime)`. 루프마다 flush → 확정 ≥ 정원이면 종료 → 1순위 없으면 종료 → promote. 테스트: 정원 4·취소 후 확정 2·대기 3 → 2명 승급, 동시성 파일 시나리오 7(정원 2→4 후 확정 취소 → 승급 3).
+- 제안 6 (`test:`): `Enrollment.cancel()`의 COMPLETED·NOT_COMPLETED 거부, GET 경로 변수·`X-Employee-Id` 형식 오류 400.
+- 제안 3·5 (`docs:`): 설계명세 6.2절 명시적 flush의 성격, 3.3절 오류 판정 순서.
+- 제안 2 (후속): 시나리오 4의 응답 순번을 신청별 DB 위치와 하나씩 대조.
+- 검토: 1·4는 critical-reviewer 재검토. 통과 후 `./gradlew check --rerun-tasks`, 테스트 합계와 `@Test` 개수 대조.
