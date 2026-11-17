@@ -42,6 +42,43 @@ class CourseSessionTest {
             e -> assertThat(((ConflictException) e).getCode()).isEqualTo("SESSION_NOT_RECRUITING"));
   }
 
+  @Test
+  void sessionBeforeStartIsNotStarted() {
+    CourseSession session = newSession(NOW.plusDays(1));
+
+    assertThatCode(() -> session.requireNotStarted(NOW)).doesNotThrowAnyException();
+  }
+
+  @Test
+  void closedSessionBeforeStartIsNotStarted() {
+    CourseSession session = newSession(NOW.plusDays(1));
+    session.close();
+
+    assertThatCode(() -> session.requireNotStarted(NOW)).doesNotThrowAnyException();
+  }
+
+  @Test
+  void sessionAtStartTimeIsAlreadyStarted() {
+    CourseSession session = newSession(NOW);
+
+    assertThatThrownBy(() -> session.requireNotStarted(NOW))
+        .isInstanceOf(ConflictException.class)
+        .satisfies(
+            e ->
+                assertThat(((ConflictException) e).getCode()).isEqualTo("SESSION_ALREADY_STARTED"));
+  }
+
+  @Test
+  void sessionAfterStartIsAlreadyStarted() {
+    CourseSession session = newSession(NOW);
+
+    assertThatThrownBy(() -> session.requireNotStarted(NOW.plusMinutes(1)))
+        .isInstanceOf(ConflictException.class)
+        .satisfies(
+            e ->
+                assertThat(((ConflictException) e).getCode()).isEqualTo("SESSION_ALREADY_STARTED"));
+  }
+
   private CourseSession newSession(LocalDateTime startAt) {
     Course course = Course.create("테스트 과정", "개발", "설명");
     return CourseSession.create(course, startAt, "강의실", 10);
