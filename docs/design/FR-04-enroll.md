@@ -110,7 +110,8 @@ CREATE UNIQUE INDEX ux_enrollment_course_employee_active
 2. `session.requireOpenForEnrollment(now)`: 상태·시작 시각 확인.
 3. 중복 사전 확인: 같은 과정·직원의 `CONFIRMED`/`WAITING`이 있으면 `DUPLICATE_ENROLLMENT`.
 4. 확정 인원 = `countBySessionIdAndStatus(sessionId, CONFIRMED)`.
-5. 확정 인원 < 정원이면 `Enrollment.confirm(...)`, 아니면 `Enrollment.waiting(...)`.
+5. 확정 인원 < 정원이고 같은 회차에 대기자가 없으면 `Enrollment.confirm(...)`, 아니면 `Enrollment.waiting(...)`.
+   대기자 조건은 최종 검토(W1)에서 추가했다. 자동 승급(D-02)이 없는 지금 정원을 늘리면 새 신청자가 대기자를 앞지르기 때문이다. 자동 승급이 생기면 이 조건은 항상 참이 된다.
 6. `saveAndFlush`. 유일 인덱스 위반(`DataIntegrityViolationException`)은 `DUPLICATE_ENROLLMENT`로 바꾼다.
 7. 커밋할 때 락이 풀린다.
 
@@ -137,6 +138,7 @@ CREATE UNIQUE INDEX ux_enrollment_course_employee_active
 | `@WebMvcTest` | `EnrollmentController` | 201 본문 / sessionId 누락 400 / 헤더 누락 400 / 404 / 409 두 종류의 `code` 값 |
 | `@DataJpaTest` | 스키마·Repository | 같은 과정·직원의 두 번째 유효 신청은 다른 회차여도 유일 인덱스 위반 / 다른 과정이면 허용 / 취소 후 재신청은 허용 / 상태별 카운트 |
 | 단위 (Mockito) | `EnrollmentService` | 같은 과정의 다른 회차에 유효 신청이 있으면 409 `DUPLICATE_ENROLLMENT` |
+| 단위 (Mockito) | `EnrollmentService` | 자리가 남아도 같은 회차에 대기자가 있으면 `WAITING` (최종 검토 W1) |
 | 동시성 (`@SpringBootTest`, test 프로필, 로컬 PostgreSQL) | NFR-01 | 정원 1 회차에 서로 다른 직원 100명이 동시에 신청 → `CONFIRMED` 정확히 1, `WAITING` 99, 예외 0 |
 | 동시성 | NFR-01 | 정원 5, 100명 → `CONFIRMED` 5, `WAITING` 95 |
 | 동시성 | FR-04 | 같은 직원이 같은 회차에 10번 동시 신청 → 유효 신청 1건, 나머지 9건은 `DUPLICATE_ENROLLMENT` |

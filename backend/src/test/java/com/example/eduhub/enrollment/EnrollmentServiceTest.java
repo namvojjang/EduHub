@@ -56,6 +56,8 @@ class EnrollmentServiceTest {
     givenSessionLocked();
     when(enrollmentRepository.countBySessionIdAndStatus(SESSION_ID, EnrollmentStatus.CONFIRMED))
         .thenReturn(1L);
+    when(enrollmentRepository.countBySessionIdAndStatus(SESSION_ID, EnrollmentStatus.WAITING))
+        .thenReturn(0L);
     givenSaveReturnsArgument();
 
     EnrollmentResponse response = service.apply(EMPLOYEE_ID, SESSION_ID);
@@ -71,6 +73,24 @@ class EnrollmentServiceTest {
     givenSessionLocked();
     when(enrollmentRepository.countBySessionIdAndStatus(SESSION_ID, EnrollmentStatus.CONFIRMED))
         .thenReturn(2L);
+    when(enrollmentRepository.countBySessionIdAndStatus(SESSION_ID, EnrollmentStatus.WAITING))
+        .thenReturn(0L);
+    givenSaveReturnsArgument();
+
+    EnrollmentResponse response = service.apply(EMPLOYEE_ID, SESSION_ID);
+
+    assertThat(response.getStatus()).isEqualTo(EnrollmentStatus.WAITING);
+    assertThat(response.getConfirmedAt()).isNull();
+    assertSavedFor(EnrollmentStatus.WAITING);
+  }
+
+  @Test
+  void applyWhenSeatLeftButWaitingExistsIsWaiting() {
+    givenSessionLocked();
+    when(enrollmentRepository.countBySessionIdAndStatus(SESSION_ID, EnrollmentStatus.CONFIRMED))
+        .thenReturn(1L);
+    when(enrollmentRepository.countBySessionIdAndStatus(SESSION_ID, EnrollmentStatus.WAITING))
+        .thenReturn(3L);
     givenSaveReturnsArgument();
 
     EnrollmentResponse response = service.apply(EMPLOYEE_ID, SESSION_ID);

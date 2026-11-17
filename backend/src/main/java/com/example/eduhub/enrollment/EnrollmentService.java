@@ -47,8 +47,12 @@ public class EnrollmentService {
 
     long confirmed =
         enrollmentRepository.countBySessionIdAndStatus(sessionId, EnrollmentStatus.CONFIRMED);
+    long waiting =
+        enrollmentRepository.countBySessionIdAndStatus(sessionId, EnrollmentStatus.WAITING);
+    // D-02·D-04: 대기자를 앞지르지 않는다. 정원이 늘어도 대기자가 있으면 새 신청은 대기다.
+    // 자동 승급이 구현되면 자리가 나는 즉시 대기자가 승급하므로 waiting == 0 조건은 항상 참이 된다.
     Enrollment enrollment =
-        confirmed < session.getCapacity()
+        confirmed < session.getCapacity() && waiting == 0
             ? Enrollment.confirm(session, employeeId, now)
             : Enrollment.waiting(session, employeeId, now);
 

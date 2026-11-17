@@ -103,7 +103,7 @@ T1과 T2는 서로 의존하지 않는다. 같은 파일을 건드리지 않으�
     1. `courseSessionRepository.findByIdForUpdate(sessionId).orElseThrow(() -> new CourseSessionNotFoundException(sessionId))`
     2. `LocalDateTime now = LocalDateTime.now()`; `session.requireOpenForEnrollment(now)`
     3. `existsByCourseIdAndEmployeeIdAndStatusIn(courseId, employeeId, Arrays.asList(CONFIRMED, WAITING))`이면 `DuplicateEnrollmentException`
-    4. `countBySessionIdAndStatus(sessionId, CONFIRMED) < session.getCapacity()`이면 `Enrollment.confirm`, 아니면 `Enrollment.waiting`
+    4. `countBySessionIdAndStatus(sessionId, CONFIRMED) < session.getCapacity()`이고 `countBySessionIdAndStatus(sessionId, WAITING) == 0`이면 `Enrollment.confirm`, 아니면 `Enrollment.waiting` (대기자 조건은 최종 검토 W1에서 추가)
     5. `try { enrollmentRepository.saveAndFlush(e) } catch (DataIntegrityViolationException ex) { throw new DuplicateEnrollmentException(...) }` — 잡은 뒤 같은 트랜잭션에서 다른 쿼리를 하지 않는다.
        위반한 제약이 `ux_enrollment_course_employee_active`일 때만 변환하고, 다른 무결성 위반(NOT NULL, FK)은 원래 예외를 다시 던진다 (T3 검토 W1). 제약 이름은 원인 사슬의 Hibernate `ConstraintViolationException.getConstraintName()`으로 보고, 없으면 `getMostSpecificCause()` 메시지로 확인한다.
   - 메서드 주석에 FR-04, NFR-01, D-03 참조와 "락은 커밋 때 풀린다"를 적는다.
