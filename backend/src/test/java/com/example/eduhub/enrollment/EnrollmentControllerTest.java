@@ -32,7 +32,8 @@ class EnrollmentControllerTest {
   void applyReturnsCreated() throws Exception {
     LocalDateTime now = LocalDateTime.of(2030, 1, 1, 9, 0);
     given(enrollmentService.apply(1L, 10L))
-        .willReturn(new EnrollmentResponse(100L, 10L, EnrollmentStatus.CONFIRMED, now, now));
+        .willReturn(
+            new EnrollmentResponse(100L, 10L, EnrollmentStatus.CONFIRMED, now, now, null, false));
 
     mockMvc
         .perform(

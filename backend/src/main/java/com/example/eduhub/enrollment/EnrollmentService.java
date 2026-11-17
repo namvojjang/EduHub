@@ -56,14 +56,83 @@ public class EnrollmentService {
             ? Enrollment.confirm(session, employeeId, now)
             : Enrollment.waiting(session, employeeId, now);
 
+    Enrollment saved;
     try {
-      return EnrollmentResponse.from(enrollmentRepository.saveAndFlush(enrollment));
+      saved = enrollmentRepository.saveAndFlush(enrollment);
     } catch (DataIntegrityViolationException e) {
       if (isActiveEnrollmentViolation(e)) {
         throw new DuplicateEnrollmentException("이미 신청한 과정입니다: " + courseId);
       }
       throw e;
     }
+    // 위반 후에는 쿼리를 하지 않는다. 순번은 정상 저장된 뒤, 회차 락을 쥔 채 계산한다 (FR-05).
+    return EnrollmentResponse.from(saved, waitingNumberOf(saved));
+  }
+
+  /** 내 신청 단건 조회 (FR-05). 순번은 락 없이 읽은 조회 시점 값이다 (설계명세 6.4). 다른 직원의 신청은 없는 것으로 본다 (NFR-03). */
+  @Transactional(readOnly = true)
+  public EnrollmentResponse get(Long employeeId, Long enrollmentId) {
+    Enrollment enrollment =
+        enrollmentRepository
+            .findById(enrollmentId)
+            .filter(e -> employeeId.equals(e.getEmployeeId()))
+            .orElseThrow(() -> new EnrollmentNotFoundException(enrollmentId));
+    return EnrollmentResponse.from(enrollment, waitingNumberOf(enrollment));
+  }
+
+  /**
+   * 신청 취소와 대기 1순위 자동 승급 (FR-06, D-04, NFR-01).
+   *
+   * <p>순서가 중요하다. 락 전에 엔티티를 읽으면 낡은 상태로 이중 승급한다. 그래서 회차 ID만 읽고, 회차 락을 잡은 뒤에 신청 엔티티를 읽는다.
+   */
+  public EnrollmentResponse cancel(Long employeeId, Long enrollmentId) {
+    Long sessionId =
+        enrollmentRepository
+            .findSessionIdById(enrollmentId)
+            .orElseThrow(() -> new EnrollmentNotFoundException(enrollmentId));
+    CourseSession session =
+        courseSessionRepository
+            .findByIdForUpdate(sessionId)
+            .orElseThrow(() -> new CourseSessionNotFoundException(sessionId));
+
+    Enrollment enrollment =
+        enrollmentRepository
+            .findById(enrollmentId)
+            .orElseThrow(() -> new EnrollmentNotFoundException(enrollmentId));
+    if (!employeeId.equals(enrollment.getEmployeeId())) {
+      throw new EnrollmentNotFoundException(enrollmentId);
+    }
+
+    LocalDateTime now = LocalDateTime.now();
+    session.requireNotStarted(now);
+
+    boolean wasConfirmed = enrollment.getStatus() == EnrollmentStatus.CONFIRMED;
+    enrollment.cancel();
+    if (wasConfirmed) {
+      promoteFirstWaiting(sessionId, now);
+    }
+    return EnrollmentResponse.from(enrollment, null);
+  }
+
+  /** 회차 락을 쥔 호출자만 부른다. 정원 증가 승급(D-02, 후속 작업)에서 재사용한다. */
+  void promoteFirstWaiting(Long sessionId, LocalDateTime now) {
+    enrollmentRepository
+        .findFirstBySessionIdAndStatusOrderByAppliedAtAscIdAsc(sessionId, EnrollmentStatus.WAITING)
+        .ifPresent(e -> e.promote(now));
+  }
+
+  /** 대기 순번 = 앞선 대기 수 + 1. 대기가 아니면 null (FR-05, D-04). */
+  private Integer waitingNumberOf(Enrollment enrollment) {
+    if (enrollment.getStatus() != EnrollmentStatus.WAITING) {
+      return null;
+    }
+    return (int)
+            enrollmentRepository.countAhead(
+                enrollment.getSession().getId(),
+                EnrollmentStatus.WAITING,
+                enrollment.getAppliedAt(),
+                enrollment.getId())
+        + 1;
   }
 
   /**
