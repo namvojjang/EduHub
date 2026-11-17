@@ -96,7 +96,7 @@ ALTER TABLE enrollment ADD COLUMN promoted BOOLEAN NOT NULL DEFAULT FALSE;
 |---|---|---|
 | course | `CourseSession` | `requireNotStarted(LocalDateTime now)` 추가: `!startAt.isAfter(now)`면 `ConflictException(SESSION_ALREADY_STARTED)` |
 | enrollment | `Enrollment` | `boolean promoted` 필드. `cancel()`: `CONFIRMED`/`WAITING`만 → `CANCELLED`, 아니면 `ConflictException(ENROLLMENT_NOT_CANCELLABLE)`. `promote(LocalDateTime now)`: `WAITING`만 → `CONFIRMED`, `confirmedAt = now`, `promoted = true`, 아니면 `IllegalStateException`(서비스 버그) |
-| enrollment | `EnrollmentRepository` | `findSessionIdById(id)`(JPQL, 회차 ID만), `countWaitingAhead(sessionId, appliedAt, id)`(JPQL, 2절 식), `findFirstBySessionIdAndStatusOrderByAppliedAtAscIdAsc(sessionId, WAITING)` |
+| enrollment | `EnrollmentRepository` | `findSessionIdById(id)`(JPQL, 회차 ID만), `countAhead(sessionId, appliedAt, id)`(JPQL, 2절 식), `findFirstBySessionIdAndStatusOrderByAppliedAtAscIdAsc(sessionId, WAITING)` |
 | enrollment | `EnrollmentService` | `apply` 응답에 순번. `get(employeeId, enrollmentId)` readOnly. `cancel(employeeId, enrollmentId)`. 1순위 승급은 `promoteFirstWaiting(Long sessionId, LocalDateTime now)`(패키지 전용, 회차 락을 쥔 호출자만 부른다)로 분리해 정원 증가 후속 작업(Q2)에서 재사용한다 |
 | enrollment | `EnrollmentResponse` | `waitingNumber`, `promoted` 추가. `from(enrollment, Integer waitingNumber)` |
 | enrollment | `EnrollmentController` | `GET /{enrollmentId}`, `POST /{enrollmentId}/cancel` |
@@ -128,12 +128,12 @@ ALTER TABLE enrollment ADD COLUMN promoted BOOLEAN NOT NULL DEFAULT FALSE;
 
 ### 6.3 `apply` 변경
 
-- 저장 직후, 같은 락 안에서 `WAITING`이면 `countWaitingAhead + 1`로 순번을 계산해 응답에 넣는다. `CONFIRMED`면 null.
+- 저장 직후, 같은 락 안에서 `WAITING`이면 `countAhead + 1`로 순번을 계산해 응답에 넣는다. `CONFIRMED`면 null.
 - 확정 조건 `confirmed < capacity && waiting == 0`(FR-04 W1)은 그대로 둔다. 확정 취소 시 같은 트랜잭션에서 승급하므로 "자리가 남았는데 대기자가 있는" 상태는 이 기능의 경로로는 생기지 않는다. 다만 관리자 정원 증가(Q2)가 아직 승급하지 않으므로 그 경우의 추월 방지로 계속 필요하다.
 
 ### 6.4 `get(employeeId, enrollmentId)` (`@Transactional(readOnly = true)`)
 
-- 락 없이 `findById` → 본인 확인(아니면 404) → `WAITING`이면 `countWaitingAhead + 1`.
+- 락 없이 `findById` → 본인 확인(아니면 404) → `WAITING`이면 `countAhead + 1`.
 - 두 쿼리 사이에 다른 취소가 커밋되면 순번이 한 칸 어긋난 값이 나올 수 있다. 조회 시점 값이라는 D-04의 요구 범위로 보고 허용한다.
 
 ### 6.5 왜 정합성이 지켜지는가
@@ -172,7 +172,7 @@ ALTER TABLE enrollment ADD COLUMN promoted BOOLEAN NOT NULL DEFAULT FALSE;
 | 단위 (Mockito) | `EnrollmentService.apply` | 대기면 응답에 순번(앞선 대기 수 + 1), 확정이면 null |
 | 단위 (Mockito) | `EnrollmentService.cancel` | 확정 취소 → 1순위 승급 / 확정 취소, 대기자 없음 → 승급 없음 / 대기 취소 → 승급 조회 안 함 / 없는 신청 404 / 다른 직원 404 / 시작된 회차 409 / 이미 취소 409 / **회차 락을 잡은 뒤에 신청을 읽는다**(`InOrder`: `findSessionIdById` → `findByIdForUpdate` → `findById`) |
 | 단위 (Mockito) | `EnrollmentService.get` | 대기 순번 / 확정이면 null / 다른 직원 404 |
-| `@DataJpaTest` | Repository·스키마 | `countWaitingAhead`: 신청 시각 순, 같은 시각이면 id 순, 다른 회차·다른 상태 제외 / `findFirst...`가 같은 기준의 첫 행 / `findSessionIdById` / `promoted` 컬럼 기본값 false |
+| `@DataJpaTest` | Repository·스키마 | `countAhead`: 신청 시각 순, 같은 시각이면 id 순, 다른 회차·다른 상태 제외 / `findFirst...`가 같은 기준의 첫 행 / `findSessionIdById` / `promoted` 컬럼 기본값 false |
 | `@WebMvcTest` | `EnrollmentController` | 신청 201 본문에 `waitingNumber`·`promoted` / 조회 200·404 / 취소 200·404·409 두 code / 헤더 누락 400 |
 | 동시성 (`@SpringBootTest`, test 프로필) | NFR-01·FR-06 | 아래 6.5 표의 경우 |
 
