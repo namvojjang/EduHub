@@ -199,7 +199,7 @@ Optional<Enrollment> findFirstBySessionIdAndStatusOrderByAppliedAtAscIdAsc(
 - `EnrollmentCancelConcurrencyTest`
   1. `confirmedCancelsAndNewAppliesKeepCapacityAndOrder`: 정원 5, 확정 5 + 대기 20 → 확정자 5명 취소 + 새 직원 20명 신청 동시 → 확정 5, `promoted = true`인 확정 5명이 원래 대기 1~5순위, 대기 35, 순번 `1..35`, 예외 0
   2. `sameEnrollmentCancelledTenTimesPromotesOnce`: 정원 1, 확정 1 + 대기 3 → 같은 신청 10번 동시 취소 → 성공 1, `ENROLLMENT_NOT_CANCELLABLE` 9, 확정 1(원래 대기 1순위, promoted), 대기 2, 순번 `1..2`
-  3. `manyConfirmedCancelsPromoteEachWaitingOnce`: 정원 10, 확정 10 + 대기 10 → 확정자 10명 동시 취소 → 확정 10, 모두 promoted, 대기 0
+  3. `manyConfirmedCancelsPromoteEachWaitingOnce`: 정원 10, 확정 10 + 대기 15 → 확정자 10명 동시 취소 → 확정 10, 승급자 = 원래 대기 앞 10명, 대기 5
   5. `cancelAfterCapacityShrinkDoesNotPromote` (W1, 실제 DB, 동시 실행 아님): 정원 5·확정 5·대기 2 → `CourseAdminService.updateSession`으로 정원 3 → 확정 1명 `cancel` → 확정 4, 대기 2, `promoted = true` 0건 (파일별로 묶어서 번호가 4보다 앞에 온다. 이 테스트는 카운트가 취소를 반영함을 증명하지만 명시적 flush 자체는 고정하지 못한다 — 자동 flush로도 통과한다. 명시적 flush는 단위 테스트 `promoteFirstWaitingFlushesBeforeCounting`이 고정한다)
   6. `confirmedCancelAndFirstWaitingCancelPromoteSecond` (T5 검토 경고): 정원 1·확정 1·대기 3 회차 20개, 각 회차의 확정 취소와 대기 1순위 취소를 한꺼번에 동시 실행 → 회차마다 1순위 CANCELLED, 2순위 승급, 대기 1, 실패 0. 시나리오 3은 대기 15명으로 늘려 승급 10명 = 원래 앞 10명을 확인한다
 - `EnrollmentConcurrencyTest`에 추가
