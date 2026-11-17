@@ -210,6 +210,18 @@ export interface EnrollmentResponse {
      * @memberof EnrollmentResponse
      */
     'confirmedAt'?: string;
+    /**
+     * 
+     * @type {number}
+     * @memberof EnrollmentResponse
+     */
+    'waitingNumber'?: number;
+    /**
+     * 
+     * @type {boolean}
+     * @memberof EnrollmentResponse
+     */
+    'promoted'?: boolean;
 }
 
 export const EnrollmentResponseStatusEnum = {
@@ -1204,6 +1216,88 @@ export const EnrollmentApiAxiosParamCreator = function (configuration?: Configur
                 options: localVarRequestOptions,
             };
         },
+        /**
+         * 
+         * @summary 내 신청 취소 (확정 취소 시 대기 1순위 자동 확정)
+         * @param {number} xEmployeeId 
+         * @param {number} enrollmentId 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        cancelEnrollment: async (xEmployeeId: number, enrollmentId: number, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'xEmployeeId' is not null or undefined
+            assertParamExists('cancelEnrollment', 'xEmployeeId', xEmployeeId)
+            // verify required parameter 'enrollmentId' is not null or undefined
+            assertParamExists('cancelEnrollment', 'enrollmentId', enrollmentId)
+            const localVarPath = `/api/v1/enrollments/{enrollmentId}/cancel`
+                .replace(`{${"enrollmentId"}}`, encodeURIComponent(String(enrollmentId)));
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'POST', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+            if (xEmployeeId !== undefined && xEmployeeId !== null) {
+                localVarHeaderParameter['X-Employee-Id'] = String(JSON.stringify(xEmployeeId));
+            }
+
+
+    
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+        /**
+         * 
+         * @summary 내 신청 단건 조회 (대기 순번 포함)
+         * @param {number} xEmployeeId 
+         * @param {number} enrollmentId 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        getEnrollment: async (xEmployeeId: number, enrollmentId: number, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'xEmployeeId' is not null or undefined
+            assertParamExists('getEnrollment', 'xEmployeeId', xEmployeeId)
+            // verify required parameter 'enrollmentId' is not null or undefined
+            assertParamExists('getEnrollment', 'enrollmentId', enrollmentId)
+            const localVarPath = `/api/v1/enrollments/{enrollmentId}`
+                .replace(`{${"enrollmentId"}}`, encodeURIComponent(String(enrollmentId)));
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'GET', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+            if (xEmployeeId !== undefined && xEmployeeId !== null) {
+                localVarHeaderParameter['X-Employee-Id'] = String(JSON.stringify(xEmployeeId));
+            }
+
+
+    
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
     }
 };
 
@@ -1224,6 +1318,30 @@ export const EnrollmentApiFp = function(configuration?: Configuration) {
          */
         async applyEnrollment(xEmployeeId: number, enrollmentRequest: EnrollmentRequest, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<EnrollmentResponse>> {
             const localVarAxiosArgs = await localVarAxiosParamCreator.applyEnrollment(xEmployeeId, enrollmentRequest, options);
+            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+        },
+        /**
+         * 
+         * @summary 내 신청 취소 (확정 취소 시 대기 1순위 자동 확정)
+         * @param {number} xEmployeeId 
+         * @param {number} enrollmentId 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async cancelEnrollment(xEmployeeId: number, enrollmentId: number, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<EnrollmentResponse>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.cancelEnrollment(xEmployeeId, enrollmentId, options);
+            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+        },
+        /**
+         * 
+         * @summary 내 신청 단건 조회 (대기 순번 포함)
+         * @param {number} xEmployeeId 
+         * @param {number} enrollmentId 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async getEnrollment(xEmployeeId: number, enrollmentId: number, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<EnrollmentResponse>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.getEnrollment(xEmployeeId, enrollmentId, options);
             return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
         },
     }
@@ -1247,6 +1365,28 @@ export const EnrollmentApiFactory = function (configuration?: Configuration, bas
         applyEnrollment(xEmployeeId: number, enrollmentRequest: EnrollmentRequest, options?: any): AxiosPromise<EnrollmentResponse> {
             return localVarFp.applyEnrollment(xEmployeeId, enrollmentRequest, options).then((request) => request(axios, basePath));
         },
+        /**
+         * 
+         * @summary 내 신청 취소 (확정 취소 시 대기 1순위 자동 확정)
+         * @param {number} xEmployeeId 
+         * @param {number} enrollmentId 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        cancelEnrollment(xEmployeeId: number, enrollmentId: number, options?: any): AxiosPromise<EnrollmentResponse> {
+            return localVarFp.cancelEnrollment(xEmployeeId, enrollmentId, options).then((request) => request(axios, basePath));
+        },
+        /**
+         * 
+         * @summary 내 신청 단건 조회 (대기 순번 포함)
+         * @param {number} xEmployeeId 
+         * @param {number} enrollmentId 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        getEnrollment(xEmployeeId: number, enrollmentId: number, options?: any): AxiosPromise<EnrollmentResponse> {
+            return localVarFp.getEnrollment(xEmployeeId, enrollmentId, options).then((request) => request(axios, basePath));
+        },
     };
 };
 
@@ -1268,6 +1408,32 @@ export class EnrollmentApi extends BaseAPI {
      */
     public applyEnrollment(xEmployeeId: number, enrollmentRequest: EnrollmentRequest, options?: AxiosRequestConfig) {
         return EnrollmentApiFp(this.configuration).applyEnrollment(xEmployeeId, enrollmentRequest, options).then((request) => request(this.axios, this.basePath));
+    }
+
+    /**
+     * 
+     * @summary 내 신청 취소 (확정 취소 시 대기 1순위 자동 확정)
+     * @param {number} xEmployeeId 
+     * @param {number} enrollmentId 
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof EnrollmentApi
+     */
+    public cancelEnrollment(xEmployeeId: number, enrollmentId: number, options?: AxiosRequestConfig) {
+        return EnrollmentApiFp(this.configuration).cancelEnrollment(xEmployeeId, enrollmentId, options).then((request) => request(this.axios, this.basePath));
+    }
+
+    /**
+     * 
+     * @summary 내 신청 단건 조회 (대기 순번 포함)
+     * @param {number} xEmployeeId 
+     * @param {number} enrollmentId 
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof EnrollmentApi
+     */
+    public getEnrollment(xEmployeeId: number, enrollmentId: number, options?: AxiosRequestConfig) {
+        return EnrollmentApiFp(this.configuration).getEnrollment(xEmployeeId, enrollmentId, options).then((request) => request(this.axios, this.basePath));
     }
 }
 

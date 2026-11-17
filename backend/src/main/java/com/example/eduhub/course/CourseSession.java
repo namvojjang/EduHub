@@ -86,6 +86,17 @@ public class CourseSession {
     }
   }
 
+  /**
+   * 취소 가능 시점 검사 (FR-06, D-04). 회차 시작 전까지만 취소할 수 있다.
+   *
+   * <p>상태는 보지 않는다. 모집 마감이어도 시작 전이면 취소할 수 있다 (D-01).
+   */
+  public void requireNotStarted(LocalDateTime now) {
+    if (!startAt.isAfter(now)) {
+      throw new ConflictException("SESSION_ALREADY_STARTED", "이미 시작된 회차입니다.");
+    }
+  }
+
   private void requireRecruiting(String message) {
     if (status != CourseSessionStatus.RECRUITING) {
       throw new ConflictException("SESSION_NOT_RECRUITING", message);

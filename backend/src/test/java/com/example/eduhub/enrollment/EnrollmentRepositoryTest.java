@@ -129,6 +129,103 @@ class EnrollmentRepositoryTest {
         .isFalse();
   }
 
+  @Test
+  void countAheadOrdersByAppliedAt() {
+    CourseSession session = newSession(newCourse());
+    Enrollment e1 = saveWaiting(session, NOW.plusMinutes(1));
+    Enrollment e2 = saveWaiting(session, NOW.plusMinutes(2));
+    Enrollment e3 = saveWaiting(session, NOW.plusMinutes(3));
+
+    assertThat(countAhead(e1)).isEqualTo(0);
+    assertThat(countAhead(e2)).isEqualTo(1);
+    assertThat(countAhead(e3)).isEqualTo(2);
+  }
+
+  @Test
+  void countAheadBreaksTieById() {
+    CourseSession session = newSession(newCourse());
+    LocalDateTime same = NOW.plusMinutes(1);
+    Enrollment a = saveWaiting(session, same);
+    Enrollment b = saveWaiting(session, same);
+    Enrollment small = a.getId() < b.getId() ? a : b;
+    Enrollment large = small == a ? b : a;
+
+    assertThat(countAhead(small)).isEqualTo(0);
+    assertThat(countAhead(large)).isEqualTo(1);
+  }
+
+  @Test
+  void countAheadIgnoresOtherSessionsAndStatuses() {
+    Course course = newCourse();
+    CourseSession session = newSession(course);
+    CourseSession other = newSession(newCourse());
+    // 앞선 시각이지만 세지 않아야 하는 신청들
+    saveWaiting(other, NOW.minusMinutes(10));
+    enrollmentRepository.saveAndFlush(
+        Enrollment.confirm(session, uniqueEmployeeId(), NOW.minusMinutes(9)));
+    Enrollment cancelled = saveWaiting(session, NOW.minusMinutes(8));
+    cancelled.cancel();
+    enrollmentRepository.saveAndFlush(cancelled);
+    Enrollment target = saveWaiting(session, NOW);
+
+    assertThat(countAhead(target)).isEqualTo(0);
+  }
+
+  @Test
+  void findFirstWaitingUsesSameOrder() {
+    CourseSession session = newSession(newCourse());
+    LocalDateTime same = NOW.plusMinutes(1);
+    Enrollment a = saveWaiting(session, same);
+    Enrollment b = saveWaiting(session, same);
+    saveWaiting(session, NOW.plusMinutes(5));
+    Long smallId = Math.min(a.getId(), b.getId());
+
+    Enrollment first =
+        enrollmentRepository
+            .findFirstBySessionIdAndStatusOrderByAppliedAtAscIdAsc(
+                session.getId(), EnrollmentStatus.WAITING)
+            .get();
+
+    assertThat(first.getId()).isEqualTo(smallId);
+  }
+
+  @Test
+  void findSessionIdByIdAndEmployeeIdReturnsSessionIdOnlyForOwner() {
+    CourseSession session = newSession(newCourse());
+    Enrollment e = saveWaiting(session, NOW);
+    Long owner = e.getEmployeeId();
+
+    assertThat(enrollmentRepository.findSessionIdByIdAndEmployeeId(e.getId(), owner))
+        .contains(session.getId());
+    assertThat(enrollmentRepository.findSessionIdByIdAndEmployeeId(e.getId(), owner + 1)).isEmpty();
+    assertThat(enrollmentRepository.findSessionIdByIdAndEmployeeId(Long.MAX_VALUE, owner))
+        .isEmpty();
+  }
+
+  @Test
+  void promotedDefaultsToFalse() {
+    CourseSession session = newSession(newCourse());
+    Enrollment e = saveWaiting(session, NOW);
+
+    Object promoted =
+        em.getEntityManager()
+            .createNativeQuery("SELECT promoted FROM enrollment WHERE id = :id")
+            .setParameter("id", e.getId())
+            .getSingleResult();
+
+    assertThat(promoted).isEqualTo(Boolean.FALSE);
+  }
+
+  private Enrollment saveWaiting(CourseSession session, LocalDateTime appliedAt) {
+    return enrollmentRepository.saveAndFlush(
+        Enrollment.waiting(session, uniqueEmployeeId(), appliedAt));
+  }
+
+  private long countAhead(Enrollment e) {
+    return enrollmentRepository.countAhead(
+        e.getSession().getId(), EnrollmentStatus.WAITING, e.getAppliedAt(), e.getId());
+  }
+
   private Course newCourse() {
     return em.persistAndFlush(Course.create("테스트 과정", "개발", "설명"));
   }
