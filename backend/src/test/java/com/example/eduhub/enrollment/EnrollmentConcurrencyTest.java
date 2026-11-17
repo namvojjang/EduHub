@@ -9,7 +9,9 @@ import com.example.eduhub.course.CourseSession;
 import com.example.eduhub.course.CourseSessionRepository;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -220,6 +222,74 @@ class EnrollmentConcurrencyTest {
       release.countDown();
       executor.shutdownNow();
     }
+  }
+
+  /** 동시 신청 시 대기 순번 (FR-05, D-04). 응답 순번은 회차 락 안에서 계산하므로 중복·누락이 없어야 한다. 응답과 DB 기준 순번을 모두 확인한다. */
+  @Test
+  void hundredApplicantsGetDistinctWaitingNumbers() throws Exception {
+    CourseSession session = newSession(newCourse(), 1);
+    final ConcurrentLinkedQueue<EnrollmentResponse> responses =
+        new ConcurrentLinkedQueue<EnrollmentResponse>();
+    List<Callable<Object>> tasks = new ArrayList<Callable<Object>>();
+    for (int i = 0; i < 100; i++) {
+      final Long employeeId = EMPLOYEE_IDS.incrementAndGet();
+      final Long sessionId = session.getId();
+      tasks.add(
+          new Callable<Object>() {
+            @Override
+            public Object call() {
+              EnrollmentResponse response = enrollmentService.apply(employeeId, sessionId);
+              responses.add(response);
+              return response;
+            }
+          });
+    }
+
+    Outcome outcome = runConcurrently(tasks);
+
+    long confirmed =
+        enrollmentRepository.countBySessionIdAndStatus(session.getId(), EnrollmentStatus.CONFIRMED);
+    long waiting =
+        enrollmentRepository.countBySessionIdAndStatus(session.getId(), EnrollmentStatus.WAITING);
+    String message = "확정=" + confirmed + ", 대기=" + waiting + ", " + outcome.describe();
+    assertThat(outcome.failures).as(message).isEmpty();
+    assertThat(responses).as(message).hasSize(100);
+
+    int nullCount = 0;
+    List<Integer> numbers = new ArrayList<Integer>();
+    for (EnrollmentResponse response : responses) {
+      if (response.getWaitingNumber() == null) {
+        nullCount++;
+      } else {
+        numbers.add(response.getWaitingNumber());
+      }
+    }
+    Set<Integer> expected = new HashSet<Integer>();
+    for (int i = 1; i <= 99; i++) {
+      expected.add(i);
+    }
+    assertThat(nullCount).as("순번 null(확정) 응답 수, " + message).isEqualTo(1);
+    assertThat(numbers).as("대기 응답 수, " + message).hasSize(99);
+    assertThat(new HashSet<Integer>(numbers)).as("응답 순번 집합, " + message).isEqualTo(expected);
+
+    List<Long> waitingIds =
+        jdbcTemplate.queryForList(
+            "select id from enrollment where session_id = ? and status = 'WAITING'"
+                + " order by applied_at, id",
+            Long.class,
+            session.getId());
+    List<Integer> dbNumbers = new ArrayList<Integer>();
+    List<Integer> expectedOrdered = new ArrayList<Integer>();
+    for (int i = 0; i < waitingIds.size(); i++) {
+      Long id = waitingIds.get(i);
+      Long employeeId =
+          jdbcTemplate.queryForObject(
+              "select employee_id from enrollment where id = ?", Long.class, id);
+      dbNumbers.add(enrollmentService.get(employeeId, id).getWaitingNumber());
+      expectedOrdered.add(i + 1);
+    }
+    assertThat(waitingIds).as("DB 대기 행 수, " + message).hasSize(99);
+    assertThat(dbNumbers).as("DB 기준 순번 1..99, " + message).isEqualTo(expectedOrdered);
   }
 
   // ---------- 도우미 ----------
