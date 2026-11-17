@@ -97,7 +97,7 @@ ALTER TABLE enrollment ADD COLUMN promoted BOOLEAN NOT NULL DEFAULT FALSE;
 | course | `CourseSession` | `requireNotStarted(LocalDateTime now)` 추가: `!startAt.isAfter(now)`면 `ConflictException(SESSION_ALREADY_STARTED)` |
 | enrollment | `Enrollment` | `boolean promoted` 필드. `cancel()`: `CONFIRMED`/`WAITING`만 → `CANCELLED`, 아니면 `ConflictException(ENROLLMENT_NOT_CANCELLABLE)`. `promote(LocalDateTime now)`: `WAITING`만 → `CONFIRMED`, `confirmedAt = now`, `promoted = true`, 아니면 `IllegalStateException`(서비스 버그) |
 | enrollment | `EnrollmentRepository` | `findSessionIdById(id)`(JPQL, 회차 ID만), `countAhead(sessionId, appliedAt, id)`(JPQL, 2절 식), `findFirstBySessionIdAndStatusOrderByAppliedAtAscIdAsc(sessionId, WAITING)` |
-| enrollment | `EnrollmentService` | `apply` 응답에 순번. `get(employeeId, enrollmentId)` readOnly. `cancel(employeeId, enrollmentId)`. 1순위 승급은 `promoteFirstWaiting(Long sessionId, LocalDateTime now)`(패키지 전용, 회차 락을 쥔 호출자만 부른다)로 분리해 정원 증가 후속 작업(Q2)에서 재사용한다 |
+| enrollment | `EnrollmentService` | `apply` 응답에 순번. `get(employeeId, enrollmentId)` readOnly. `cancel(employeeId, enrollmentId)`. 1순위 승급은 `boolean promoteFirstWaiting(CourseSession lockedSession, LocalDateTime now)`(패키지 전용, 회차 락을 쥔 호출자만 부른다, 자리가 있을 때만 승급 — 6.2절 W1)로 분리해 정원 증가 후속 작업(Q2)에서 재사용한다. 후속 작업이 course 패키지에서 쓰려면 public으로 바꾸거나 enrollment 패키지에 진입점을 둬야 한다 |
 | enrollment | `EnrollmentResponse` | `waitingNumber`, `promoted` 추가. `from(enrollment, Integer waitingNumber)` |
 | enrollment | `EnrollmentController` | `GET /{enrollmentId}`, `POST /{enrollmentId}/cancel` |
 | enrollment | `EnrollmentNotFoundException` | `NotFoundException` 상속, code `ENROLLMENT_NOT_FOUND` |
@@ -186,5 +186,6 @@ ALTER TABLE enrollment ADD COLUMN promoted BOOLEAN NOT NULL DEFAULT FALSE;
 2. **같은 확정 신청을 10번 동시 취소**: 정원 1, 확정 1 + 대기 3 → 성공 1, `ENROLLMENT_NOT_CANCELLABLE` 9, 확정 1(원래 대기 1순위), 대기 2, 순번 `1..2`.
 3. **확정자 여러 명 동시 취소**: 정원 10, 확정 10 + 대기 10 → 10명 동시 취소 → 확정 10, 모두 `promoted`, 대기 0.
 4. **동시 신청 시 대기 순번** (승인 조건): 정원 1 회차에 서로 다른 직원 100명이 동시에 신청 → 응답 `waitingNumber`가 null인 응답 1개(확정), 나머지 99개의 순번이 `1..99`로 정확히 한 번씩 나온다. DB 기준(2절 식)으로 다시 계산한 순번도 `1..99`. 응답 순번은 같은 락 안에서 계산하므로 중복·누락이 없어야 한다.
+5. **정원 축소 후 확정 취소 (W1, 실제 DB, 동시 실행 아님)**: 정원 5·확정 5·대기 2 → 정원 3으로 수정(하한 검사 없음) → 확정 1명 취소 → 확정 4, 대기 2, 승급 0. flush 후 카운트가 같은 트랜잭션의 취소를 반영하는지 실제 DB로 확인한다.
 
 락 제거 검증 (작업 지시 4): 위 테스트가 통과한 뒤, `cancel`의 `findByIdForUpdate`를 `findById`로 임시로 바꿔 실행해 1·2번이 실패하는 것을 확인하고 원복한다. 그 출력을 구현 기록으로 남긴다(코드에는 남기지 않는다).
