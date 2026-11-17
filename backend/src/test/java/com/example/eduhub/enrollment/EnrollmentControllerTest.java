@@ -184,6 +184,33 @@ class EnrollmentControllerTest {
   }
 
   @Test
+  void getWithNonNumericEnrollmentIdIsBadRequest() throws Exception {
+    mockMvc
+        .perform(get("/api/v1/enrollments/abc").header("X-Employee-Id", "1"))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.code").value("INVALID_REQUEST"));
+    verifyNoInteractions(enrollmentService);
+  }
+
+  @Test
+  void getWithNonNumericEmployeeHeaderIsBadRequest() throws Exception {
+    mockMvc
+        .perform(get("/api/v1/enrollments/101").header("X-Employee-Id", "abc"))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.code").value("INVALID_REQUEST"));
+    verifyNoInteractions(enrollmentService);
+  }
+
+  @Test
+  void cancelWithNonNumericEmployeeHeaderIsBadRequest() throws Exception {
+    mockMvc
+        .perform(post("/api/v1/enrollments/100/cancel").header("X-Employee-Id", "abc"))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.code").value("INVALID_REQUEST"));
+    verifyNoInteractions(enrollmentService);
+  }
+
+  @Test
   void cancelReturnsOk() throws Exception {
     LocalDateTime now = LocalDateTime.of(2030, 1, 1, 9, 0);
     given(enrollmentService.cancel(1L, 100L))

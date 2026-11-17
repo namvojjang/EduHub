@@ -83,6 +83,24 @@ class EnrollmentTest {
   }
 
   @Test
+  void cancelCompletedOrNotCompletedEnrollmentIsConflict() {
+    for (EnrollmentStatus status :
+        new EnrollmentStatus[] {EnrollmentStatus.COMPLETED, EnrollmentStatus.NOT_COMPLETED}) {
+      Enrollment enrollment = Enrollment.confirm(newSession(), EMPLOYEE_ID, NOW);
+      ReflectionTestUtils.setField(enrollment, "status", status);
+
+      assertThatThrownBy(enrollment::cancel)
+          .as(status.name())
+          .isInstanceOf(ConflictException.class)
+          .satisfies(
+              e ->
+                  assertThat(((ConflictException) e).getCode())
+                      .isEqualTo("ENROLLMENT_NOT_CANCELLABLE"));
+      assertThat(enrollment.getStatus()).isEqualTo(status);
+    }
+  }
+
+  @Test
   void promoteWaitingEnrollmentRecordsConfirmedAtAndPromoted() {
     Enrollment enrollment = Enrollment.waiting(newSession(), EMPLOYEE_ID, NOW);
     LocalDateTime later = NOW.plusHours(3);
