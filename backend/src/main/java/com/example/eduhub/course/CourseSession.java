@@ -78,6 +78,14 @@ public class CourseSession {
     this.status = CourseSessionStatus.CLOSED;
   }
 
+  /** 수강 신청 가능 여부 검사 (FR-04, D-01). 모집 중이 아니거나 이미 시작된 회차는 409. */
+  public void requireOpenForEnrollment(LocalDateTime now) {
+    requireRecruiting("모집 중인 회차가 아닙니다.");
+    if (!startAt.isAfter(now)) {
+      throw new ConflictException("SESSION_NOT_RECRUITING", "이미 시작된 회차입니다.");
+    }
+  }
+
   private void requireRecruiting(String message) {
     if (status != CourseSessionStatus.RECRUITING) {
       throw new ConflictException("SESSION_NOT_RECRUITING", message);
