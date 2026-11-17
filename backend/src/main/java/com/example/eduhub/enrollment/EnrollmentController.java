@@ -9,6 +9,8 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import javax.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
@@ -17,7 +19,7 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * 수강 신청 API (FR-04).
+ * 수강 신청 API (FR-04), 대기 순번 조회 (FR-05), 신청 취소와 자동 승급 (FR-06).
  *
  * <p>springdoc 1.x는 @ApiResponse를 하나라도 직접 달면 성공 응답을 자동으로 만들지 않으므로 성공 응답도 명시한다.
  */
@@ -53,5 +55,49 @@ public class EnrollmentController {
       @RequestHeader("X-Employee-Id") Long employeeId,
       @Valid @RequestBody EnrollmentRequest request) {
     return enrollmentService.apply(employeeId, request.getSessionId());
+  }
+
+  @Operation(operationId = "getEnrollment", summary = "내 신청 단건 조회 (대기 순번 포함)")
+  @ApiResponse(
+      responseCode = "200",
+      description = "조회됨 (대기이면 waitingNumber 포함)",
+      content = @Content(schema = @Schema(implementation = EnrollmentResponse.class)))
+  @ApiResponse(
+      responseCode = "400",
+      description = "입력값 오류",
+      content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+  @ApiResponse(
+      responseCode = "404",
+      description = "신청이 없음 (다른 직원의 신청 포함)",
+      content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+  @GetMapping("/{enrollmentId}")
+  public EnrollmentResponse get(
+      // TODO(NFR-03): 로그인 사용자에서 employeeId를 꺼낸다. 헤더는 임시다.
+      @RequestHeader("X-Employee-Id") Long employeeId, @PathVariable Long enrollmentId) {
+    return enrollmentService.get(employeeId, enrollmentId);
+  }
+
+  @Operation(operationId = "cancelEnrollment", summary = "내 신청 취소 (확정 취소 시 대기 1순위 자동 확정)")
+  @ApiResponse(
+      responseCode = "200",
+      description = "취소됨",
+      content = @Content(schema = @Schema(implementation = EnrollmentResponse.class)))
+  @ApiResponse(
+      responseCode = "400",
+      description = "입력값 오류",
+      content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+  @ApiResponse(
+      responseCode = "404",
+      description = "신청이 없음 (다른 직원의 신청 포함)",
+      content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+  @ApiResponse(
+      responseCode = "409",
+      description = "ENROLLMENT_NOT_CANCELLABLE: 취소할 수 없는 상태, SESSION_ALREADY_STARTED: 이미 시작된 회차",
+      content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+  @PostMapping("/{enrollmentId}/cancel")
+  public EnrollmentResponse cancel(
+      // TODO(NFR-03): 로그인 사용자에서 employeeId를 꺼낸다. 헤더는 임시다.
+      @RequestHeader("X-Employee-Id") Long employeeId, @PathVariable Long enrollmentId) {
+    return enrollmentService.cancel(employeeId, enrollmentId);
   }
 }
