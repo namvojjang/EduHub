@@ -121,7 +121,10 @@ ALTER TABLE enrollment ADD COLUMN promoted BOOLEAN NOT NULL DEFAULT FALSE;
 4. 본인 확인: `employeeId`가 다르면 404 `ENROLLMENT_NOT_FOUND` (Q3).
 5. `session.requireNotStarted(now)` → 409 `SESSION_ALREADY_STARTED`.
 6. `boolean wasConfirmed = enrollment.getStatus() == CONFIRMED`; `enrollment.cancel()` → 이미 취소 등이면 409 `ENROLLMENT_NOT_CANCELLABLE`.
-7. `wasConfirmed`이면 `findFirstBySessionIdAndStatusOrderByAppliedAtAscIdAsc(sessionId, WAITING)`이 있으면 `promote(now)`. 대기 취소면 승급하지 않는다(확정 인원이 그대로이므로). 순번은 저장하지 않으므로 뒤 대기자는 자동으로 당겨진다.
+7. `wasConfirmed`이면 `promoteFirstWaiting(session, now)`. 대기 취소면 승급하지 않는다(확정 인원이 그대로이므로). 순번은 저장하지 않으므로 뒤 대기자는 자동으로 당겨진다.
+   - **W1 결정 (T3 비교 실험 검토, 2026-11-17)**: 승급은 "취소 반영 후 확정 인원 < 정원"일 때만 한다. 정원 하한 검사(D-02)가 아직 없어 관리자가 정원을 확정 인원보다 줄일 수 있고, 그 상태에서 무조건 승급하면 초과가 유지된다.
+   - `promoteFirstWaiting(CourseSession lockedSession, LocalDateTime now)`가 조건을 스스로 갖는다: `enrollmentRepository.flush()` → `countBySessionIdAndStatus(CONFIRMED)` → `< capacity`일 때만 1순위를 `promote`, 승급했으면 true. 정원 증가 후속 작업(D-02)은 "true인 동안 반복"으로 재사용한다.
+   - 명시적 `flush`를 고른 이유: 이 메서드는 호출자의 미반영 변경과 무관하게 맞아야 재사용할 수 있다. Hibernate의 쿼리 전 자동 flush에 기대지 않고, "취소 전 확정 수 − 1"은 취소 경로에서만 맞는 계산이라 쓰지 않는다.
 8. 커밋 시 변경 감지로 UPDATE, 락 해제.
 
 1단계에서 엔티티를 읽지 않는 이유: 락 전에 읽은 엔티티는 영속성 컨텍스트에 남아 3단계의 `findById`가 DB를 다시 읽지 않는다. 그러면 같은 신청을 동시에 두 번 취소할 때 두 번째 트랜잭션이 낡은 `CONFIRMED`를 보고 **한 번 더 승급**시켜 정원을 넘긴다. 이것이 이번 기능의 핵심 위험이고 동시성 테스트로 검증한다.
@@ -144,11 +147,12 @@ ALTER TABLE enrollment ADD COLUMN promoted BOOLEAN NOT NULL DEFAULT FALSE;
 | 같은 신청을 동시에 두 번 취소 | 두 번째는 락 뒤에 다시 읽은 `CANCELLED`를 보고 409. 승급은 한 번 |
 | 확정자 여러 명 동시 취소 | 한 줄로 서서 각각 그 시점 1순위를 승급. 같은 대기자가 두 번 승급되지 않는다 (락 뒤에 읽으므로 앞에서 승급된 사람은 이미 `CONFIRMED`) |
 | 대기 취소 + 확정 취소 | 한 줄. 대기 1순위가 먼저 취소되면 승급 대상은 다음 사람 |
+| 정원이 확정 인원보다 작게 줄어든 뒤 확정 취소 (W1) | 취소 반영 후 확정 ≥ 정원이면 승급하지 않는다. 초과분은 취소로만 줄어든다 |
 | 다른 회차 | 서로 막지 않는다 |
 
 ### 6.6 알고 있는 제약
 
-- 관리자 회차 수정(`CourseAdminService.updateSession`)은 여전히 락·하한 검사(D-02)·자동 승급이 없다 (Q2 결정: 이번 범위 밖). 신청·취소와 동시에 정원이 바뀌면 그 순간의 판정이 낡은 정원으로 이뤄질 수 있고, 정원을 늘려도 대기자가 승급하지 않는다(새 신청은 W1 조건으로 대기 뒤에 선다). 후속 작업은 같은 회차 락을 잡고 이번에 만드는 1순위 승급 메서드(`EnrollmentService.promoteFirstWaiting(sessionId, now)`)를 늘어난 자리만큼 반복 호출하면 된다. PR 위험 목록에도 적는다.
+- 관리자 회차 수정(`CourseAdminService.updateSession`)은 여전히 락·하한 검사(D-02)·자동 승급이 없다 (Q2 결정: 이번 범위 밖). 신청·취소와 동시에 정원이 바뀌면 그 순간의 판정이 낡은 정원으로 이뤄질 수 있고, 정원을 늘려도 대기자가 승급하지 않는다(새 신청은 W1 조건으로 대기 뒤에 선다). 후속 작업은 같은 회차 락을 잡고 이번에 만드는 1순위 승급 메서드(`EnrollmentService.promoteFirstWaiting(session, now)`, 자리가 있을 때만 승급)를 false가 나올 때까지 반복 호출하면 된다. PR 위험 목록에도 적는다.
 - 회차 시작 후 남은 대기는 D-01 자동 마감 전까지 `WAITING`으로 남는다. 취소는 시작 후 막히므로 그 사이에 승급은 일어나지 않는다.
 - 락 대기 시간 제한은 FR-04와 같이 두지 않는다.
 
