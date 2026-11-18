@@ -96,48 +96,50 @@ export function CourseListPage() {
         )}
 
         <Paper withBorder mb="md">
-          <Table highlightOnHover verticalSpacing="sm" aria-label="과정 목록">
-            <Table.Thead>
-              <Table.Tr>
-                <Table.Th>과정명</Table.Th>
-                <Table.Th w={160}>분류</Table.Th>
-              </Table.Tr>
-            </Table.Thead>
-            <Table.Tbody>
-              {loading ? (
+          <Table.ScrollContainer minWidth={480}>
+            <Table highlightOnHover verticalSpacing="sm" aria-label="과정 목록">
+              <Table.Thead>
                 <Table.Tr>
-                  <Table.Td colSpan={2}>
-                    <Group justify="center">
-                      <Loader size="sm" aria-label="불러오는 중" />
-                    </Group>
-                  </Table.Td>
+                  <Table.Th>과정명</Table.Th>
+                  <Table.Th w={160}>분류</Table.Th>
                 </Table.Tr>
-              ) : courses.length === 0 ? (
-                <Table.Tr>
-                  <Table.Td colSpan={2}>
-                    <Text c="dimmed" ta="center">
-                      {error ? '-' : '조건에 맞는 과정이 없습니다.'}
-                    </Text>
-                  </Table.Td>
-                </Table.Tr>
-              ) : (
-                courses.map((course) => (
-                  <Table.Tr
-                    key={course.id}
-                    style={{ cursor: 'pointer' }}
-                    onClick={() => navigate(`/courses/${course.id}`)}
-                  >
-                    <Table.Td>{course.title}</Table.Td>
-                    <Table.Td>
-                      <Badge variant="light" color="gray">
-                        {course.category}
-                      </Badge>
+              </Table.Thead>
+              <Table.Tbody>
+                {loading ? (
+                  <Table.Tr>
+                    <Table.Td colSpan={2}>
+                      <Group justify="center">
+                        <Loader size="sm" aria-label="불러오는 중" />
+                      </Group>
                     </Table.Td>
                   </Table.Tr>
-                ))
-              )}
-            </Table.Tbody>
-          </Table>
+                ) : courses.length === 0 ? (
+                  <Table.Tr>
+                    <Table.Td colSpan={2}>
+                      <Text c="dimmed" ta="center">
+                        {error ? '-' : '조건에 맞는 과정이 없습니다.'}
+                      </Text>
+                    </Table.Td>
+                  </Table.Tr>
+                ) : (
+                  courses.map((course) => (
+                    <Table.Tr
+                      key={course.id}
+                      style={{ cursor: 'pointer' }}
+                      onClick={() => navigate(`/courses/${course.id}`)}
+                    >
+                      <Table.Td>{course.title}</Table.Td>
+                      <Table.Td>
+                        <Badge variant="light" color="gray">
+                          {course.category}
+                        </Badge>
+                      </Table.Td>
+                    </Table.Tr>
+                  ))
+                )}
+              </Table.Tbody>
+            </Table>
+          </Table.ScrollContainer>
         </Paper>
 
         <Group justify="space-between" wrap="wrap">
