@@ -83,3 +83,74 @@ React 19로 올릴 때 Mantine 9로 함께 올린다. 문서(루트 `CLAUDE.md`,
 - 변경 규모: course-mfe 파일 약 15개(화면 4, 대화상자 2, 테스트 4, 설정·테마 4, 문서 3), diff 약 900~1,200줄 예상 → 루트 CLAUDE.md 5번에 따라 이 명세 승인으로 진행 지시를 받는다.
 - Module Federation으로 shell에 붙일 때 `MantineProvider`·`styles.css`는 shell이 한 번 제공해야 한다. 이번에는 단독 실행 진입점(`main.tsx`)에만 둔다. shell 작업 때 다시 정한다.
 - 브라우저 확인은 백엔드(8080)와 dev 서버(3001)를 띄우고 네 화면을 스크린샷으로 남긴다.
+
+---
+
+## 6. 2차: 업무 포털형 디자인 (A안, 개발자 결정 2026-11-19)
+
+1차(3절) 결과가 "상용 프로그램 느낌이 안 난다"는 피드백을 받아 A안(업무 포털형)으로 다시 디자인한다. 시안은 목록 화면 한 장(샘플 데이터)으로 확인했다.
+결정: A안, 목록 API 확장은 **별도 작업**(이번에는 화면만), Mantine **8.3 유지**(9는 React 19.2 필요), **Pretendard**와 **다크 모드 토글** 적용.
+이 절이 3절과 다르면 이 절을 따른다. 훅·API 클라이언트는 여전히 바꾸지 않는다.
+
+### 6.1 추가 의존성 (모두 React 18 호환 확인)
+
+| 패키지 | 버전 | 용도 |
+|---|---|---|
+| `@mantine/notifications` | `^8.3.18` | 저장·종료 뒤 토스트 |
+| `@mantine/modals` | `^8.3.18` | `window.confirm` 대신 앱 안 확인 창(`modals.openConfirmModal`) |
+| `@tabler/icons-react` | `^3.52.0` | 아이콘 (Mantine 공식 예제와 같은 세트) |
+| `pretendard` | `^1.3.9` | 글꼴. CDN이 아니라 번들에 포함(사내망 대비). `dist/web/variable/pretendardvariable-dynamic-subset.css`만 import |
+
+### 6.2 테마·다크 모드
+
+- `theme.ts`: `fontFamily`·`headings.fontFamily`를 `'Pretendard Variable', Pretendard, <시스템 글꼴>`로, `primaryColor: 'indigo'`, `defaultRadius: 'md'`, 컴포넌트 기본값(Card·Paper `radius: 'lg'`, Button `radius: 'md'`)을 둔다.
+- `MantineProvider defaultColorScheme="light"`. 사용자가 헤더에서 바꾼 값은 Mantine 기본 저장소(localStorage)에 남는다.
+- 색은 모두 테마 토큰이나 `light-dark()`로 쓴다. 고정 색(`#fff`, `gray.0` 직접 지정)은 쓰지 않는다. 화면 배경은 `light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-8))`.
+- 분류별 색은 `constants/categories.ts`의 `CATEGORY_COLOR`(개발 indigo, 데이터 cyan, 리더십 grape, 직무공통 orange, 없으면 gray).
+
+### 6.3 앱 뼈대 `src/layout/AppLayout.tsx`
+
+- `AppShell`: 헤더 60px, 좌측 내비 220px(모바일은 `Burger`로 접힘).
+- 헤더: 로고(그라데이션 `ThemeIcon` "E" + "EduHub"), 가운데 과정 검색 입력(제출하면 `/?keyword=…`로 이동), 오른쪽 다크 모드 토글(`ActionIcon`, 해/달 아이콘, `aria-label="화면 테마 전환"`)과 사용자 자리(`Avatar` + "임직원"·"로그인 연동 전" — 인증은 NFR-03 TODO, 가짜 이름을 넣지 않는다).
+- 내비: "학습" 묶음에 교육과정(`/`), 내 신청 내역(비활성, 설명 "4주차 · FR-07"), "관리" 묶음에 과정 관리(`/admin/courses`). 현재 경로에 맞춰 `active`.
+- 적용 위치: 단독 실행 진입점 `main.tsx`에서 `<AppLayout><App /></AppLayout>`. `App`(shell에 노출할 컴포넌트)에는 넣지 않는다 — shell이 생기면 이 레이아웃을 shell로 옮긴다.
+- 공용 `src/components/PageHeader.tsx`: 브레드크럼 + 제목(`Title order={2}`) + 설명 + 오른쪽 동작 영역.
+- 공용 `src/components/EmptyState.tsx`: 아이콘 + 제목 + 설명 + 선택 동작 버튼.
+
+### 6.4 FR-01 과정 목록
+
+- 검색어는 URL 쿼리 `keyword`가 기준이다(헤더 검색과 공유). 화면에 "‘검색어’ 검색 결과 · 검색 지우기"를 보여 준다. 페이지 안의 별도 검색 입력은 없앤다.
+- 분류는 `Chip.Group`(전체 + CATEGORIES). 바꾸면 page 0.
+- `SegmentedControl` 카드/표 전환(기본 카드). 카드: 분류 색 띠, 분류 Badge, 제목(2줄 자름), "자세히 보기" 버튼(상세로 이동). 표: 1차와 같은 표(`aria-label="과정 목록"`).
+- 카드에 설명·다음 회차·남은 자리는 **넣지 않는다**(목록 API에 없음, 별도 작업). 시안의 그 부분은 API 확장 뒤에 붙인다.
+- 로딩은 카드 모양 `Skeleton` 6개, 빈 결과는 `EmptyState`("조건에 맞는 과정이 없습니다." + 검색어가 있으면 "검색 지우기"), 오류는 `Alert`.
+- 아래 페이지 영역은 1차와 같다.
+
+### 6.5 FR-02 과정 상세
+
+- 브레드크럼(교육과정 › 과정명). 히어로 카드: 분류 색 띠, 분류·상태 Badge, 큰 제목, 설명.
+- 회차는 표 대신 카드 목록(`role="list" aria-label="회차 목록"`, 각 카드 `role="listitem"`): 시작 일시(크게), 장소(아이콘), 상태 Badge, 남은 자리 `Progress`(확정 비율, 남은 0이면 red·"0 (정원 마감)", 20% 이하 orange·"마감 임박", 그 외 teal)와 "남은 자리 n / 정원".
+- 각 회차 카드에 "신청하기" 버튼은 **비활성 + Tooltip "수강 신청 화면 준비 중 (enrollment-mfe)"**. 신청 화면은 이번 범위가 아니다.
+- 로딩 Skeleton, 없음은 `EmptyState`("과정을 찾을 수 없습니다." + 목록으로), 회차 없음은 `EmptyState`.
+
+### 6.6 FR-03 관리자
+
+- 과정 관리 목록: `PageHeader`(오른쪽 "과정 등록" 버튼, 아이콘), 페이지 안 검색 입력은 유지(관리자는 헤더 검색과 별개), 요약은 "전체 n개"만(상태별 통계는 API가 없어 넣지 않는다 — 목록 API 확장 작업에서 함께). 표의 관리 열은 행 메뉴(`Menu`, `ActionIcon aria-label="<과정명> 작업"`): "관리"(이동), "종료"(빨강, OPEN만).
+- 과정별 관리: 히어로 카드(제목·Badge·설명 + "과정 정보 수정"), 회차 표(상태 Badge, 남은 자리 표시) + 행 메뉴("수정", "모집 마감" — RECRUITING만).
+- 확인은 `modals.openConfirmModal`(제목, 설명, 빨간 확인 버튼 "종료"/"모집 마감", 취소). 문구는 기존 confirm 문구를 쓴다.
+- 등록·수정 폼은 `Drawer`(오른쪽, `position="right"`, size md)로 바꾼다. 입력·검증·제출 값 형식은 그대로. 분류 Select에 `allowDeselect={false}`.
+- 성공하면 `notifications.show`(초록, 예: "과정을 등록했습니다."), 실패는 기존처럼 Alert/폼 안 Alert.
+
+### 6.7 테스트
+
+- `renderWithProviders`에 `ModalsProvider`·`Notifications`를 더하고 `MemoryRouter`는 각 테스트가 지금처럼 감싼다.
+- `AppLayout` 테스트 추가: 현재 경로의 내비가 active, 헤더 검색 제출 시 `/?keyword=…`로 이동, 테마 토글 버튼이 있다.
+- 목록: URL `keyword`가 훅 인자로 가는지, 분류 칩을 바꾸면 page 0, 카드/표 전환, 빈 상태 문구.
+- 상세: `getByRole('list', { name: '회차 목록' })` 기준으로 바뀐다. 정원 마감·마감 임박 표시.
+- 관리자: 행 메뉴를 열고 `menuitem`을 누르는 흐름, 확인 창의 확인 버튼을 누르면 액션 호출, `window.confirm` 스파이는 없앤다.
+
+### 6.8 범위 밖 (별도 제안)
+
+- 목록 API 확장(설명·다음 회차·남은 자리, 상태별 개수) — FR-01·FR-03, NFR-02(N+1) 설계 필요.
+- 개발용 시드 데이터(지금 DB에는 "동시성 테스트 과정 …"만 있어 화면 인상이 나쁘다).
+- prettier 설정 파일.

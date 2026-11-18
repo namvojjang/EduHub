@@ -51,3 +51,35 @@ T1 Mantine 도입(MUI와 잠시 공존) ─> T2 FR-01 목록 ─> T3 FR-02 상�
 - `package.json`에서 `@mui/material`, `@emotion/react`, `@emotion/styled` 제거, `main.tsx`에서 MUI Provider 제거. `grep -r "@mui" src`가 비어야 한다.
 - 문서: 루트 `CLAUDE.md` 디렉터리 표(MUI → Mantine 8, course-mfe 코드 있음), `frontend/CLAUDE.md` UI 절(Mantine 8.3, 9는 React 19.2 필요해 React 19 전환 때 함께 올림)과 실제 확인한 명령, `docs/requirements.md` 기술 스택 줄.
 - 완료: `npm test`, `npm run build -w apps/course-mfe` 통과. dev 서버로 4화면 확인(메인 세션이 수행).
+
+---
+
+# 2차: 업무 포털형 (설계명세 6절)
+
+- 상태: 승인됨 (2026-11-19, A안 선택). T5(MUI 제거·문서)는 R5 뒤로 미루고 R6으로 바꾼다.
+- 완료 명령은 1차와 같다(`frontend/`에서 `npm test`, `npm run build -w apps/course-mfe`). 화면은 작업마다 메인 세션이 dev 서버로 확인한다.
+
+```
+R1 의존성·테마·공용 컴포넌트 ─> R2 AppLayout ─> R3 FR-01 목록 ─> R4 FR-02 상세 ─> R5 FR-03 관리자 ─> R6 MUI 제거·문서
+```
+
+## R1. 의존성·테마·공용 컴포넌트
+- `package.json`/lock: 6.1절 패키지 4개.
+- `theme.ts`(6.2), `main.tsx`(Pretendard css, `@mantine/notifications/styles.css`, `ModalsProvider`, `Notifications`; MUI Provider는 R6까지 유지), `constants/categories.ts`에 `CATEGORY_COLOR`.
+- 새로 만듦: `components/PageHeader.tsx`, `components/EmptyState.tsx`. `test/render.tsx`에 ModalsProvider·Notifications 추가.
+- 테스트: PageHeader·EmptyState 간단 렌더 테스트.
+
+## R2. 앱 뼈대
+- 새로 만듦: `layout/AppLayout.tsx`, `layout/AppLayout.test.tsx` (6.3, 6.7). `main.tsx`에서 감싼다.
+
+## R3. FR-01 과정 목록 (6.4)
+- `pages/CourseListPage.tsx`, 테스트. 필요하면 `components/CourseCard.tsx`.
+
+## R4. FR-02 과정 상세 (6.5)
+- `pages/CourseDetailPage.tsx`, 테스트. 필요하면 `components/SessionCard.tsx`.
+
+## R5. FR-03 관리자 (6.6)
+- `pages/AdminCourseListPage.tsx`, `pages/AdminCoursePage.tsx`, `components/CourseFormDialog.tsx`, `components/SessionFormDialog.tsx`(Drawer로, 파일 이름은 유지), 테스트 2개.
+
+## R6. MUI 제거와 문서 (1차 T5 내용 그대로)
+- MUI·emotion 제거, `grep -r "@mui" src` 비어야 함. 루트 `CLAUDE.md`, `frontend/CLAUDE.md`(Mantine 8.3·이유, 추가 패키지, 확인한 명령), `docs/requirements.md` 기술 스택.
