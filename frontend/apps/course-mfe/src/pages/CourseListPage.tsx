@@ -1,30 +1,26 @@
 import {
   Alert,
+  Badge,
   Box,
   Button,
-  CircularProgress,
-  FormControl,
-  InputLabel,
-  MenuItem,
+  Container,
+  Group,
+  Loader,
+  Pagination,
   Paper,
   Select,
-  Stack,
   Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TablePagination,
-  TableRow,
-  TextField,
-  Typography,
-} from '@mui/material';
+  Text,
+  TextInput,
+  Title,
+} from '@mantine/core';
 import { FormEvent, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { CATEGORIES } from '../constants/categories';
 import { useCourses } from '../hooks/useCourses';
 
-const PAGE_SIZE_OPTIONS = [10, 20, 50];
+const PAGE_SIZE_OPTIONS = ['10', '20', '50'];
+const ALL_CATEGORIES = '전체';
 
 /** 과정 목록 화면 (FR-01). 데이터는 useCourses로만 가져온다. */
 export function CourseListPage() {
@@ -32,6 +28,7 @@ export function CourseListPage() {
   const [keywordInput, setKeywordInput] = useState('');
   const [keyword, setKeyword] = useState('');
   const [category, setCategory] = useState('');
+  // page는 훅에 넘기는 값이라 0부터. 화면의 Pagination에는 +1해서 보여 준다.
   const [page, setPage] = useState(0);
   const [size, setSize] = useState(20);
 
@@ -43,111 +40,127 @@ export function CourseListPage() {
     setPage(0);
   };
 
-  const handleCategoryChange = (value: string) => {
-    setCategory(value);
+  const handleCategoryChange = (value: string | null) => {
+    setCategory(!value || value === ALL_CATEGORIES ? '' : value);
     setPage(0);
   };
 
   const courses = data?.content ?? [];
+  const total = data?.totalElements ?? 0;
+  const totalPages = Math.max(1, Math.ceil(total / size));
+  const from = total === 0 ? 0 : page * size + 1;
+  const to = Math.min((page + 1) * size, total);
 
   return (
-    <Box sx={{ maxWidth: 960, mx: 'auto', p: 3 }}>
-      <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1 }}>
-        <Typography variant="h5" component="h1">
-          교육과정
-        </Typography>
-        {/* 인증(NFR-03)이 생기기 전까지는 누구나 관리 화면으로 갈 수 있다. */}
-        <Button size="small" onClick={() => navigate('/admin/courses')}>
-          과정 관리
-        </Button>
-      </Stack>
+    <Box bg="gray.0" mih="100vh" py="xl">
+      <Container size="lg">
+        <Group justify="space-between" align="flex-start" mb="lg">
+          <div>
+            <Title order={2}>교육과정</Title>
+            <Text c="dimmed" size="sm">
+              사내 교육과정을 검색하고 일정을 확인하세요.
+            </Text>
+          </div>
+          {/* 인증(NFR-03)이 생기기 전까지는 누구나 관리 화면으로 갈 수 있다. */}
+          <Button variant="default" onClick={() => navigate('/admin/courses')}>
+            과정 관리
+          </Button>
+        </Group>
 
-      <Stack component="form" direction="row" spacing={2} sx={{ mb: 2 }} onSubmit={handleSearch}>
-        <TextField
-          label="과정명 검색"
-          size="small"
-          value={keywordInput}
-          onChange={(e) => setKeywordInput(e.target.value)}
-          sx={{ flex: 1 }}
-        />
-        <FormControl size="small" sx={{ minWidth: 160 }}>
-          <InputLabel id="category-label">분류</InputLabel>
-          <Select
-            labelId="category-label"
-            label="분류"
-            value={category}
-            onChange={(e) => handleCategoryChange(e.target.value)}
-          >
-            <MenuItem value="">전체</MenuItem>
-            {CATEGORIES.map((c) => (
-              <MenuItem key={c} value={c}>
-                {c}
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
-        <Button type="submit" variant="contained">
-          검색
-        </Button>
-      </Stack>
+        <Paper withBorder p="md" mb="md">
+          <form onSubmit={handleSearch}>
+            <Group wrap="wrap" align="flex-end">
+              <TextInput
+                label="과정명 검색"
+                value={keywordInput}
+                onChange={(e) => setKeywordInput(e.currentTarget.value)}
+                style={{ flex: 1, minWidth: 200 }}
+              />
+              <Select
+                label="분류"
+                allowDeselect={false}
+                data={[ALL_CATEGORIES, ...CATEGORIES]}
+                value={category === '' ? ALL_CATEGORIES : category}
+                onChange={handleCategoryChange}
+                w={180}
+              />
+              <Button type="submit">검색</Button>
+            </Group>
+          </form>
+        </Paper>
 
-      {error && (
-        <Alert severity="error" sx={{ mb: 2 }}>
-          과정 목록을 불러오지 못했습니다. ({error.message})
-        </Alert>
-      )}
+        {error && (
+          <Alert color="red" mb="md">
+            과정 목록을 불러오지 못했습니다. ({error.message})
+          </Alert>
+        )}
 
-      <TableContainer component={Paper}>
-        <Table size="small" aria-label="과정 목록">
-          <TableHead>
-            <TableRow>
-              <TableCell>과정명</TableCell>
-              <TableCell sx={{ width: 160 }}>분류</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {loading ? (
-              <TableRow>
-                <TableCell colSpan={2} align="center">
-                  <CircularProgress size={28} aria-label="불러오는 중" />
-                </TableCell>
-              </TableRow>
-            ) : courses.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={2} align="center">
-                  {error ? '-' : '조건에 맞는 과정이 없습니다.'}
-                </TableCell>
-              </TableRow>
-            ) : (
-              courses.map((course) => (
-                <TableRow
-                  key={course.id}
-                  hover
-                  sx={{ cursor: 'pointer' }}
-                  onClick={() => navigate(`/courses/${course.id}`)}
-                >
-                  <TableCell>{course.title}</TableCell>
-                  <TableCell>{course.category}</TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-        <TablePagination
-          component="div"
-          count={data?.totalElements ?? 0}
-          page={page}
-          rowsPerPage={size}
-          rowsPerPageOptions={PAGE_SIZE_OPTIONS}
-          onPageChange={(_, next) => setPage(next)}
-          onRowsPerPageChange={(e) => {
-            setSize(Number(e.target.value));
-            setPage(0);
-          }}
-          labelRowsPerPage="페이지당"
-          labelDisplayedRows={({ from, to, count }) => `${from}–${to} / 전체 ${count}`}
-        />
-      </TableContainer>
+        <Paper withBorder mb="md">
+          <Table highlightOnHover verticalSpacing="sm" aria-label="과정 목록">
+            <Table.Thead>
+              <Table.Tr>
+                <Table.Th>과정명</Table.Th>
+                <Table.Th w={160}>분류</Table.Th>
+              </Table.Tr>
+            </Table.Thead>
+            <Table.Tbody>
+              {loading ? (
+                <Table.Tr>
+                  <Table.Td colSpan={2}>
+                    <Group justify="center">
+                      <Loader size="sm" aria-label="불러오는 중" />
+                    </Group>
+                  </Table.Td>
+                </Table.Tr>
+              ) : courses.length === 0 ? (
+                <Table.Tr>
+                  <Table.Td colSpan={2}>
+                    <Text c="dimmed" ta="center">
+                      {error ? '-' : '조건에 맞는 과정이 없습니다.'}
+                    </Text>
+                  </Table.Td>
+                </Table.Tr>
+              ) : (
+                courses.map((course) => (
+                  <Table.Tr
+                    key={course.id}
+                    style={{ cursor: 'pointer' }}
+                    onClick={() => navigate(`/courses/${course.id}`)}
+                  >
+                    <Table.Td>{course.title}</Table.Td>
+                    <Table.Td>
+                      <Badge variant="light" color="gray">
+                        {course.category}
+                      </Badge>
+                    </Table.Td>
+                  </Table.Tr>
+                ))
+              )}
+            </Table.Tbody>
+          </Table>
+        </Paper>
+
+        <Group justify="space-between" wrap="wrap">
+          <Text size="sm" c="dimmed">
+            {`${from}–${to} / 전체 ${total}`}
+          </Text>
+          <Group wrap="wrap">
+            <Select
+              aria-label="페이지당"
+              data={PAGE_SIZE_OPTIONS}
+              value={String(size)}
+              allowDeselect={false}
+              onChange={(value) => {
+                if (!value) return;
+                setSize(Number(value));
+                setPage(0);
+              }}
+              w={90}
+            />
+            <Pagination total={totalPages} value={page + 1} onChange={(next) => setPage(next - 1)} />
+          </Group>
+        </Group>
+      </Container>
     </Box>
   );
 }

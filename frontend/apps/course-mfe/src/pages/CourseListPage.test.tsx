@@ -1,7 +1,8 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, screen } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useCourses } from '../hooks/useCourses';
+import { renderWithProviders } from '../test/render';
 import { CourseListPage } from './CourseListPage';
 
 vi.mock('../hooks/useCourses', () => ({
@@ -11,7 +12,7 @@ vi.mock('../hooks/useCourses', () => ({
 const useCoursesMock = vi.mocked(useCourses);
 
 function renderPage() {
-  return render(
+  return renderWithProviders(
     <MemoryRouter initialEntries={['/']}>
       <Routes>
         <Route path="/" element={<CourseListPage />} />
@@ -71,5 +72,17 @@ describe('CourseListPage', () => {
     fireEvent.click(screen.getByText('Java 기초'));
 
     expect(screen.getByText('상세 화면')).toBeInTheDocument();
+  });
+
+  it('화면의 2페이지를 누르면 훅에는 page 1(0부터)로 요청한다', () => {
+    useCoursesMock.mockReturnValue({
+      ...twoCourses,
+      data: { ...twoCourses.data, totalElements: 45 },
+    });
+
+    renderPage();
+    fireEvent.click(screen.getByRole('button', { name: '2' }));
+
+    expect(useCoursesMock).toHaveBeenLastCalledWith({ keyword: '', category: '', page: 1, size: 20 });
   });
 });
