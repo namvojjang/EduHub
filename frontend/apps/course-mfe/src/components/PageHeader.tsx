@@ -20,13 +20,18 @@ export function PageHeader({ breadcrumbs, title, description, actions }: PageHea
     <Stack gap="xs" mb="lg">
       {breadcrumbs && breadcrumbs.length > 0 && (
         <Breadcrumbs>
-          {breadcrumbs.map((item) =>
+          {breadcrumbs.map((item, index) =>
             item.to ? (
-              <Anchor key={item.label} component={Link} to={item.to} size="sm">
+              <Anchor key={index} component={Link} to={item.to} size="sm">
                 {item.label}
               </Anchor>
             ) : (
-              <Text key={item.label} size="sm" c="dimmed">
+              <Text
+                key={index}
+                size="sm"
+                c="dimmed"
+                aria-current={index === breadcrumbs.length - 1 ? 'page' : undefined}
+              >
                 {item.label}
               </Text>
             ),

@@ -9,6 +9,7 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import { App } from './App';
+import { AppLayout } from './layout/AppLayout';
 import { theme as mantineTheme } from './theme';
 
 // 단독 실행용 진입점. Module Federation으로 shell에 붙일 때는 App을 노출한다.
@@ -18,15 +19,18 @@ const theme = createTheme();
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <MantineProvider theme={mantineTheme} defaultColorScheme="light">
-      <ModalsProvider>
-        <Notifications />
-        <ThemeProvider theme={theme}>
-          <CssBaseline />
-          <BrowserRouter>
-            <App />
-          </BrowserRouter>
-        </ThemeProvider>
-      </ModalsProvider>
+      {/* BrowserRouter는 ModalsProvider보다 바깥: 확인 창 안에서도 router를 쓸 수 있게 한다. */}
+      <BrowserRouter>
+        <ModalsProvider>
+          <Notifications />
+          <ThemeProvider theme={theme}>
+            <CssBaseline />
+            <AppLayout>
+              <App />
+            </AppLayout>
+          </ThemeProvider>
+        </ModalsProvider>
+      </BrowserRouter>
     </MantineProvider>
   </StrictMode>,
 );
