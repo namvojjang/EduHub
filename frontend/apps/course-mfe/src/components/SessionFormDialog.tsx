@@ -1,14 +1,5 @@
 import type { SessionRequest } from '@eduhub/api-client';
-import {
-  Alert,
-  Button,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogTitle,
-  Stack,
-  TextField,
-} from '@mui/material';
+import { Alert, Button, Group, Modal, Stack, TextInput } from '@mantine/core';
 import { FormEvent, useEffect, useState } from 'react';
 import { getErrorMessage } from '../api/errorMessage';
 
@@ -68,44 +59,42 @@ export function SessionFormDialog({ open, initial, onClose, onSubmit }: Props) {
   };
 
   return (
-    <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm">
+    <Modal opened={open} onClose={onClose} title={initial ? '회차 수정' : '회차 추가'} size="md" centered>
       <form onSubmit={handleSubmit}>
-        <DialogTitle>{initial ? '회차 수정' : '회차 추가'}</DialogTitle>
-        <DialogContent>
-          <Stack spacing={2} sx={{ mt: 1 }}>
-            {error && <Alert severity="error">{error}</Alert>}
-            <TextField
-              label="시작 일시"
-              type="datetime-local"
-              required
-              InputLabelProps={{ shrink: true }}
-              value={form.startAt}
-              onChange={(e) => setForm({ ...form, startAt: e.target.value })}
-            />
-            <TextField
-              label="장소"
-              required
-              inputProps={{ maxLength: 200 }}
-              value={form.place}
-              onChange={(e) => setForm({ ...form, place: e.target.value })}
-            />
-            <TextField
-              label="정원"
-              type="number"
-              required
-              inputProps={{ min: 1 }}
-              value={form.capacity}
-              onChange={(e) => setForm({ ...form, capacity: e.target.value })}
-            />
-          </Stack>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={onClose}>취소</Button>
-          <Button type="submit" variant="contained" disabled={saving}>
-            저장
-          </Button>
-        </DialogActions>
+        <Stack>
+          {error && <Alert color="red">{error}</Alert>}
+          <TextInput
+            label="시작 일시"
+            type="datetime-local"
+            required
+            value={form.startAt}
+            onChange={(e) => setForm({ ...form, startAt: e.currentTarget.value })}
+          />
+          <TextInput
+            label="장소"
+            required
+            maxLength={200}
+            value={form.place}
+            onChange={(e) => setForm({ ...form, place: e.currentTarget.value })}
+          />
+          <TextInput
+            label="정원"
+            type="number"
+            required
+            min={1}
+            value={form.capacity}
+            onChange={(e) => setForm({ ...form, capacity: e.currentTarget.value })}
+          />
+          <Group justify="flex-end">
+            <Button variant="default" onClick={onClose}>
+              취소
+            </Button>
+            <Button type="submit" loading={saving}>
+              저장
+            </Button>
+          </Group>
+        </Stack>
       </form>
-    </Dialog>
+    </Modal>
   );
 }

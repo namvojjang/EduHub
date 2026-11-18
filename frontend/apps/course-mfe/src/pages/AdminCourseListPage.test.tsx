@@ -1,8 +1,9 @@
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useAdminCourses } from '../hooks/useAdminCourses';
 import { useCourseAdminActions } from '../hooks/useCourseAdminActions';
+import { renderWithProviders } from '../test/render';
 import { AdminCourseListPage } from './AdminCourseListPage';
 
 vi.mock('../hooks/useAdminCourses', () => ({ useAdminCourses: vi.fn() }));
@@ -19,7 +20,7 @@ const actions = {
 };
 
 function renderPage() {
-  return render(
+  return renderWithProviders(
     <MemoryRouter>
       <AdminCourseListPage />
     </MemoryRouter>,
@@ -61,10 +62,12 @@ describe('AdminCourseListPage', () => {
     renderPage();
 
     fireEvent.click(screen.getByRole('button', { name: '과정 등록' }));
-    const dialog = screen.getByRole('dialog');
+    const dialog = await screen.findByRole('dialog');
     fireEvent.change(within(dialog).getByLabelText(/과정명/), { target: { value: 'React 입문' } });
-    fireEvent.mouseDown(within(dialog).getByLabelText(/분류/));
-    fireEvent.click(screen.getByRole('option', { name: '개발' }));
+    const category = within(dialog).getByRole('textbox', { name: /분류/ });
+    fireEvent.click(category);
+    // jsdom에는 레이아웃이 없어 Mantine이 드롭다운을 display:none(referenceHidden)으로 두므로 hidden 옵션을 쓴다.
+    fireEvent.click(await screen.findByRole('option', { name: '개발', hidden: true }));
     fireEvent.click(within(dialog).getByRole('button', { name: '저장' }));
 
     await waitFor(() =>

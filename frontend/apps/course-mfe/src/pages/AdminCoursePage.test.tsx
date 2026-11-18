@@ -1,8 +1,9 @@
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useCourseAdminActions } from '../hooks/useCourseAdminActions';
 import { useCourseDetail } from '../hooks/useCourseDetail';
+import { renderWithProviders } from '../test/render';
 import { AdminCoursePage } from './AdminCoursePage';
 
 vi.mock('../hooks/useCourseDetail', () => ({ useCourseDetail: vi.fn() }));
@@ -52,7 +53,7 @@ function detail(status: 'OPEN' | 'CLOSED') {
 }
 
 function renderPage() {
-  return render(
+  return renderWithProviders(
     <MemoryRouter initialEntries={['/admin/courses/7']}>
       <Routes>
         <Route path="/admin/courses/:id" element={<AdminCoursePage />} />
@@ -84,7 +85,7 @@ describe('AdminCoursePage', () => {
     renderPage();
 
     fireEvent.click(screen.getByRole('button', { name: '회차 추가' }));
-    const dialog = screen.getByRole('dialog');
+    const dialog = await screen.findByRole('dialog');
     fireEvent.change(within(dialog).getByLabelText(/시작 일시/), { target: { value: '2030-03-02T13:30' } });
     fireEvent.change(within(dialog).getByLabelText(/장소/), { target: { value: '본사 5층' } });
     fireEvent.change(within(dialog).getByLabelText(/정원/), { target: { value: '15' } });
@@ -104,7 +105,7 @@ describe('AdminCoursePage', () => {
     renderPage();
 
     fireEvent.click(screen.getByRole('button', { name: '회차 추가' }));
-    const dialog = screen.getByRole('dialog');
+    const dialog = await screen.findByRole('dialog');
     fireEvent.change(within(dialog).getByLabelText(/시작 일시/), { target: { value: '2030-03-02T13:30' } });
     fireEvent.change(within(dialog).getByLabelText(/장소/), { target: { value: '본사' } });
     fireEvent.change(within(dialog).getByLabelText(/정원/), { target: { value: '15' } });

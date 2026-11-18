@@ -1,15 +1,5 @@
 import type { CourseRequest } from '@eduhub/api-client';
-import {
-  Alert,
-  Button,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogTitle,
-  MenuItem,
-  Stack,
-  TextField,
-} from '@mui/material';
+import { Alert, Button, Group, Modal, Select, Stack, Textarea, TextInput } from '@mantine/core';
 import { FormEvent, useEffect, useState } from 'react';
 import { getErrorMessage } from '../api/errorMessage';
 import { CATEGORIES } from '../constants/categories';
@@ -56,49 +46,42 @@ export function CourseFormDialog({ open, initial, onClose, onSubmit }: Props) {
   };
 
   return (
-    <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm">
+    <Modal opened={open} onClose={onClose} title={initial ? '과정 수정' : '과정 등록'} size="md" centered>
       <form onSubmit={handleSubmit}>
-        <DialogTitle>{initial ? '과정 수정' : '과정 등록'}</DialogTitle>
-        <DialogContent>
-          <Stack spacing={2} sx={{ mt: 1 }}>
-            {error && <Alert severity="error">{error}</Alert>}
-            <TextField
-              label="과정명"
-              required
-              inputProps={{ maxLength: 200 }}
-              value={form.title ?? ''}
-              onChange={(e) => setForm({ ...form, title: e.target.value })}
-            />
-            <TextField
-              select
-              label="분류"
-              required
-              value={form.category ?? ''}
-              onChange={(e) => setForm({ ...form, category: e.target.value })}
-            >
-              {CATEGORIES.map((c) => (
-                <MenuItem key={c} value={c}>
-                  {c}
-                </MenuItem>
-              ))}
-            </TextField>
-            <TextField
-              label="설명"
-              multiline
-              minRows={3}
-              inputProps={{ maxLength: 2000 }}
-              value={form.description ?? ''}
-              onChange={(e) => setForm({ ...form, description: e.target.value })}
-            />
-          </Stack>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={onClose}>취소</Button>
-          <Button type="submit" variant="contained" disabled={saving}>
-            저장
-          </Button>
-        </DialogActions>
+        <Stack>
+          {error && <Alert color="red">{error}</Alert>}
+          <TextInput
+            label="과정명"
+            required
+            maxLength={200}
+            value={form.title ?? ''}
+            onChange={(e) => setForm({ ...form, title: e.currentTarget.value })}
+          />
+          <Select
+            label="분류"
+            required
+            data={[...CATEGORIES]}
+            value={form.category || null}
+            onChange={(value) => setForm({ ...form, category: value ?? '' })}
+          />
+          <Textarea
+            label="설명"
+            autosize
+            minRows={3}
+            maxLength={2000}
+            value={form.description ?? ''}
+            onChange={(e) => setForm({ ...form, description: e.currentTarget.value })}
+          />
+          <Group justify="flex-end">
+            <Button variant="default" onClick={onClose}>
+              취소
+            </Button>
+            <Button type="submit" loading={saving}>
+              저장
+            </Button>
+          </Group>
+        </Stack>
       </form>
-    </Dialog>
+    </Modal>
   );
 }
