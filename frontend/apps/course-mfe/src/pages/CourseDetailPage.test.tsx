@@ -1,7 +1,8 @@
-import { render, screen, within } from '@testing-library/react';
+import { screen, within } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useCourseDetail } from '../hooks/useCourseDetail';
+import { renderWithProviders } from '../test/render';
 import { CourseDetailPage } from './CourseDetailPage';
 
 vi.mock('../hooks/useCourseDetail', () => ({
@@ -11,7 +12,7 @@ vi.mock('../hooks/useCourseDetail', () => ({
 const useCourseDetailMock = vi.mocked(useCourseDetail);
 
 function renderAt(path: string) {
-  return render(
+  return renderWithProviders(
     <MemoryRouter initialEntries={[path]}>
       <Routes>
         <Route path="/courses/:id" element={<CourseDetailPage />} />
@@ -61,6 +62,7 @@ describe('CourseDetailPage', () => {
     expect(row).toHaveTextContent('본사 3층');
     expect(row).toHaveTextContent('20');
     expect(row).toHaveTextContent('모집 중');
+    expect(screen.queryByText('0 (정원 마감)')).not.toBeInTheDocument();
   });
 
   it('회차가 없으면 안내 문구를 보여 준다', () => {
@@ -74,6 +76,34 @@ describe('CourseDetailPage', () => {
     renderAt('/courses/7');
 
     expect(screen.getByText('등록된 회차가 없습니다.')).toBeInTheDocument();
+  });
+
+  it('남은 자리가 0인 회차는 정원 마감을 보여 준다', () => {
+    useCourseDetailMock.mockReturnValue({
+      data: {
+        id: 7,
+        title: 'Java 기초',
+        category: '개발',
+        status: 'OPEN',
+        sessions: [
+          {
+            id: 70,
+            startAt: '2026-12-01T09:00:00',
+            place: '본사 3층',
+            capacity: 20,
+            remainingSeats: 0,
+            status: 'CLOSED',
+          },
+        ],
+      },
+      loading: false,
+      notFound: false,
+      error: null,
+    });
+
+    renderAt('/courses/7');
+
+    expect(screen.getByText('0 (정원 마감)')).toBeInTheDocument();
   });
 
   it('없는 과정이면 안내 메시지를 보여 준다', () => {
