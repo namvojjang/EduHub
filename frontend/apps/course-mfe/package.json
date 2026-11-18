@@ -12,6 +12,8 @@
     "@eduhub/api-client": "*",
     "@emotion/react": "^11.13.5",
     "@emotion/styled": "^11.13.5",
+    "@mantine/core": "^8.3.18",
+    "@mantine/hooks": "^8.3.18",
     "@mui/material": "^5.16.9",
     "axios": "^1.7.9",
     "react": "^18.3.1",
