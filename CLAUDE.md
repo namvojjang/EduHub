@@ -10,7 +10,7 @@ EduHub: 사내 교육과정 조회·수강 신청 시스템. 임직원(수강생
 | 경로 | 내용 | 세부 지침 |
 |---|---|---|
 | `backend/` | Java 8, Spring Boot 2.7, Gradle 7.6(Kotlin DSL, 래퍼 포함) | `backend/CLAUDE.md` |
-| `frontend/` | React 18 + TypeScript, MUI, Axios, Module Federation(`shell`, `course-mfe`, `enrollment-mfe`), npm workspaces. 아직 코드 없음 | `frontend/CLAUDE.md` |
+| `frontend/` | React 18 + TypeScript, Mantine 8.3, Axios, Module Federation(`shell`, `course-mfe`, `enrollment-mfe`), npm workspaces. 현재는 `course-mfe` 단독 앱만 있다(`shell`, `enrollment-mfe`는 아직 없음) | `frontend/CLAUDE.md` |
 | `docs/` | 요구사항·결정 사항 | — |
 | `.env.example` | 필요한 환경 변수 이름(값 없음) | — |
 
