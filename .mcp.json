@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "eduhub-db": {
+      "command": "uvx",
+      "args": ["postgres-mcp", "--access-mode=restricted"],
+      "env": {
+        "DATABASE_URI": "${EDUHUB_DB_READONLY_URL}"
+      }
+    }
+  }
+}
