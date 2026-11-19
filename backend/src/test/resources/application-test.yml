@@ -1,5 +1,10 @@
 # 테스트 프로필. 로컬 PostgreSQL의 테스트 전용 DB를 쓴다 (dev DB와 분리).
 # 접속 계정은 dev와 같고, DB 이름만 POSTGRES_TEST_DB(기본 eduhub_test)를 쓴다.
+eduhub:
+  jwt:
+    # 테스트 전용, 운영 비밀 아님.
+    secret: test-only-jwt-secret-key-not-for-production-use-0123456789
+
 spring:
   datasource:
     url: jdbc:postgresql://${POSTGRES_HOST:localhost}:${POSTGRES_PORT:5432}/${POSTGRES_TEST_DB:eduhub_test}

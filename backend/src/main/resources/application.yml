@@ -20,6 +20,12 @@ spring:
         # NFR-02: 한 번에 너무 많이 읽지 않도록 페이지 크기 상한을 둔다.
         max-page-size: 100
 
+eduhub:
+  jwt:
+    # NFR-03, NFR-06: 서명 키는 환경 변수(.env)로만 받는다. 기본값을 두지 않는다. 32바이트 이상.
+    secret: ${EDUHUB_JWT_SECRET}
+    ttl-minutes: 60
+
 springdoc:
   swagger-ui:
     path: /swagger-ui.html

@@ -1,5 +1,6 @@
 package com.example.eduhub.course;
 
+import static com.example.eduhub.TestAuth.as;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
@@ -7,9 +8,12 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.example.eduhub.auth.SecurityConfig;
+import com.example.eduhub.auth.SecurityErrorHandlers;
 import com.example.eduhub.common.error.ConflictException;
 import com.example.eduhub.common.web.PageResponse;
 import java.time.LocalDateTime;
@@ -18,16 +22,22 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.context.annotation.Import;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.MediaType;
+import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 
 @WebMvcTest(CourseAdminController.class)
+@Import({SecurityConfig.class, SecurityErrorHandlers.class})
 @ActiveProfiles("test")
 class CourseAdminControllerTest {
 
   @Autowired private MockMvc mockMvc;
+
+  @MockBean private JwtDecoder jwtDecoder;
 
   @MockBean private CourseAdminService courseAdminService;
 
@@ -43,7 +53,7 @@ class CourseAdminControllerTest {
                 1L));
 
     mockMvc
-        .perform(get("/api/v1/admin/courses"))
+        .perform(get("/api/v1/admin/courses").with(as(1L, "ADMIN")))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.content[0].status").value("CLOSED"));
   }
@@ -59,7 +69,8 @@ class CourseAdminControllerTest {
         .perform(
             post("/api/v1/admin/courses")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"title\":\"Java 기초\",\"category\":\"개발\"}"))
+                .content("{\"title\":\"Java 기초\",\"category\":\"개발\"}")
+                .with(as(1L, "ADMIN")))
         .andExpect(status().isCreated())
         .andExpect(jsonPath("$.id").value(1))
         .andExpect(jsonPath("$.status").value("OPEN"));
@@ -71,7 +82,8 @@ class CourseAdminControllerTest {
         .perform(
             post("/api/v1/admin/courses")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"title\":\" \",\"category\":\"개발\"}"))
+                .content("{\"title\":\" \",\"category\":\"개발\"}")
+                .with(as(1L, "ADMIN")))
         .andExpect(status().isBadRequest())
         .andExpect(jsonPath("$.code").value("INVALID_REQUEST"))
         .andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.containsString("title")));
@@ -87,7 +99,8 @@ class CourseAdminControllerTest {
         .perform(
             put("/api/v1/admin/courses/9")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"title\":\"t\",\"category\":\"c\"}"))
+                .content("{\"title\":\"t\",\"category\":\"c\"}")
+                .with(as(1L, "ADMIN")))
         .andExpect(status().isNotFound())
         .andExpect(jsonPath("$.code").value("COURSE_NOT_FOUND"));
   }
@@ -109,7 +122,8 @@ class CourseAdminControllerTest {
             post("/api/v1/admin/courses/1/sessions")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(
-                    "{\"startAt\":\"2030-01-06T09:00:00\",\"place\":\"본사 3층\",\"capacity\":20}"))
+                    "{\"startAt\":\"2030-01-06T09:00:00\",\"place\":\"본사 3층\",\"capacity\":20}")
+                .with(as(1L, "ADMIN")))
         .andExpect(status().isCreated())
         .andExpect(jsonPath("$.id").value(10))
         .andExpect(jsonPath("$.startAt").value("2030-01-06T09:00:00"));
@@ -121,7 +135,8 @@ class CourseAdminControllerTest {
         .perform(
             post("/api/v1/admin/courses/1/sessions")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"startAt\":\"2000-01-01T09:00:00\",\"place\":\"본사\",\"capacity\":0}"))
+                .content("{\"startAt\":\"2000-01-01T09:00:00\",\"place\":\"본사\",\"capacity\":0}")
+                .with(as(1L, "ADMIN")))
         .andExpect(status().isBadRequest())
         .andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.containsString("capacity")))
         .andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.containsString("startAt")));
@@ -136,7 +151,8 @@ class CourseAdminControllerTest {
         .perform(
             post("/api/v1/admin/courses/1/sessions")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"startAt\":\"2030-01-06T09:00:00\",\"place\":\"본사\",\"capacity\":10}"))
+                .content("{\"startAt\":\"2030-01-06T09:00:00\",\"place\":\"본사\",\"capacity\":10}")
+                .with(as(1L, "ADMIN")))
         .andExpect(status().isConflict())
         .andExpect(jsonPath("$.code").value("COURSE_CLOSED"));
   }
@@ -149,8 +165,43 @@ class CourseAdminControllerTest {
                 10L, LocalDateTime.of(2030, 1, 6, 9, 0), "본사", 20, 20, CourseSessionStatus.CLOSED));
 
     mockMvc
-        .perform(post("/api/v1/admin/sessions/10/close"))
+        .perform(post("/api/v1/admin/sessions/10/close").with(as(1L, "ADMIN")))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.status").value("CLOSED"));
+  }
+
+  @Test
+  void adminApiWithoutTokenIsUnauthorized() throws Exception {
+    mockMvc
+        .perform(
+            post("/api/v1/admin/courses")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"title\":\"t\",\"category\":\"c\"}"))
+        .andExpect(status().isUnauthorized())
+        .andExpect(header().string("WWW-Authenticate", "Bearer"))
+        .andExpect(jsonPath("$.code").value("UNAUTHENTICATED"));
+    verifyNoInteractions(courseAdminService);
+  }
+
+  @Test
+  void adminApiWithEmployeeTokenIsForbidden() throws Exception {
+    String course = "{\"title\":\"t\",\"category\":\"c\"}";
+    String session = "{\"startAt\":\"2030-01-06T09:00:00\",\"place\":\"본사\",\"capacity\":10}";
+    MockHttpServletRequestBuilder[] requests = {
+      post("/api/v1/admin/courses").content(course),
+      put("/api/v1/admin/courses/1").content(course),
+      post("/api/v1/admin/courses/1/close"),
+      post("/api/v1/admin/courses/1/sessions").content(session),
+      put("/api/v1/admin/sessions/10").content(session),
+      post("/api/v1/admin/sessions/10/close")
+    };
+
+    for (MockHttpServletRequestBuilder request : requests) {
+      mockMvc
+          .perform(request.contentType(MediaType.APPLICATION_JSON).with(as(2L, "EMPLOYEE")))
+          .andExpect(status().isForbidden())
+          .andExpect(jsonPath("$.code").value("FORBIDDEN"));
+    }
+    verifyNoInteractions(courseAdminService);
   }
 }

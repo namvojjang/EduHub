@@ -1,5 +1,6 @@
 package com.example.eduhub.enrollment;
 
+import static com.example.eduhub.TestAuth.as;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -8,6 +9,8 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.example.eduhub.auth.SecurityConfig;
+import com.example.eduhub.auth.SecurityErrorHandlers;
 import com.example.eduhub.common.error.ConflictException;
 import com.example.eduhub.course.CourseSessionNotFoundException;
 import java.time.LocalDateTime;
@@ -15,17 +18,22 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
+import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
 @WebMvcTest(EnrollmentController.class)
+@Import({SecurityConfig.class, SecurityErrorHandlers.class})
 @ActiveProfiles("test")
 class EnrollmentControllerTest {
 
   private static final String BODY = "{\"sessionId\":10}";
 
   @Autowired private MockMvc mockMvc;
+
+  @MockBean private JwtDecoder jwtDecoder;
 
   @MockBean private EnrollmentService enrollmentService;
 
@@ -41,7 +49,8 @@ class EnrollmentControllerTest {
             post("/api/v1/enrollments")
                 .header("X-Employee-Id", "1")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(BODY))
+                .content(BODY)
+                .with(as(1L, "EMPLOYEE")))
         .andExpect(status().isCreated())
         .andExpect(jsonPath("$.id").value(100))
         .andExpect(jsonPath("$.status").value("CONFIRMED"));
@@ -54,7 +63,8 @@ class EnrollmentControllerTest {
             post("/api/v1/enrollments")
                 .header("X-Employee-Id", "1")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{}"))
+                .content("{}")
+                .with(as(1L, "EMPLOYEE")))
         .andExpect(status().isBadRequest())
         .andExpect(jsonPath("$.code").value("INVALID_REQUEST"))
         .andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.containsString("sessionId")));
@@ -64,7 +74,11 @@ class EnrollmentControllerTest {
   @Test
   void applyWithoutEmployeeHeaderIsBadRequest() throws Exception {
     mockMvc
-        .perform(post("/api/v1/enrollments").contentType(MediaType.APPLICATION_JSON).content(BODY))
+        .perform(
+            post("/api/v1/enrollments")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(BODY)
+                .with(as(1L, "EMPLOYEE")))
         .andExpect(status().isBadRequest())
         .andExpect(jsonPath("$.code").value("INVALID_REQUEST"))
         .andExpect(
@@ -79,7 +93,8 @@ class EnrollmentControllerTest {
             post("/api/v1/enrollments")
                 .header("X-Employee-Id", "abc")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(BODY))
+                .content(BODY)
+                .with(as(1L, "EMPLOYEE")))
         .andExpect(status().isBadRequest())
         .andExpect(jsonPath("$.code").value("INVALID_REQUEST"));
     verifyNoInteractions(enrollmentService);
@@ -95,7 +110,8 @@ class EnrollmentControllerTest {
             post("/api/v1/enrollments")
                 .header("X-Employee-Id", "1")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(BODY))
+                .content(BODY)
+                .with(as(1L, "EMPLOYEE")))
         .andExpect(status().isNotFound())
         .andExpect(jsonPath("$.code").value("SESSION_NOT_FOUND"));
   }
@@ -110,7 +126,8 @@ class EnrollmentControllerTest {
             post("/api/v1/enrollments")
                 .header("X-Employee-Id", "1")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(BODY))
+                .content(BODY)
+                .with(as(1L, "EMPLOYEE")))
         .andExpect(status().isConflict())
         .andExpect(jsonPath("$.code").value("SESSION_NOT_RECRUITING"));
   }
@@ -125,7 +142,8 @@ class EnrollmentControllerTest {
             post("/api/v1/enrollments")
                 .header("X-Employee-Id", "1")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(BODY))
+                .content(BODY)
+                .with(as(1L, "EMPLOYEE")))
         .andExpect(status().isConflict())
         .andExpect(jsonPath("$.code").value("DUPLICATE_ENROLLMENT"));
   }
@@ -142,7 +160,8 @@ class EnrollmentControllerTest {
             post("/api/v1/enrollments")
                 .header("X-Employee-Id", "1")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(BODY))
+                .content(BODY)
+                .with(as(1L, "EMPLOYEE")))
         .andExpect(status().isCreated())
         .andExpect(jsonPath("$.waitingNumber").value(3))
         .andExpect(jsonPath("$.promoted").value(false));
@@ -156,7 +175,8 @@ class EnrollmentControllerTest {
             new EnrollmentResponse(101L, 10L, EnrollmentStatus.WAITING, now, null, 2, false));
 
     mockMvc
-        .perform(get("/api/v1/enrollments/101").header("X-Employee-Id", "1"))
+        .perform(
+            get("/api/v1/enrollments/101").header("X-Employee-Id", "1").with(as(1L, "EMPLOYEE")))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.id").value(101))
         .andExpect(jsonPath("$.status").value("WAITING"))
@@ -169,7 +189,8 @@ class EnrollmentControllerTest {
         .willThrow(new EnrollmentNotFoundException(101L));
 
     mockMvc
-        .perform(get("/api/v1/enrollments/101").header("X-Employee-Id", "1"))
+        .perform(
+            get("/api/v1/enrollments/101").header("X-Employee-Id", "1").with(as(1L, "EMPLOYEE")))
         .andExpect(status().isNotFound())
         .andExpect(jsonPath("$.code").value("ENROLLMENT_NOT_FOUND"));
   }
@@ -177,7 +198,7 @@ class EnrollmentControllerTest {
   @Test
   void getWithoutEmployeeHeaderIsBadRequest() throws Exception {
     mockMvc
-        .perform(get("/api/v1/enrollments/101"))
+        .perform(get("/api/v1/enrollments/101").with(as(1L, "EMPLOYEE")))
         .andExpect(status().isBadRequest())
         .andExpect(jsonPath("$.code").value("INVALID_REQUEST"));
     verifyNoInteractions(enrollmentService);
@@ -186,7 +207,8 @@ class EnrollmentControllerTest {
   @Test
   void getWithNonNumericEnrollmentIdIsBadRequest() throws Exception {
     mockMvc
-        .perform(get("/api/v1/enrollments/abc").header("X-Employee-Id", "1"))
+        .perform(
+            get("/api/v1/enrollments/abc").header("X-Employee-Id", "1").with(as(1L, "EMPLOYEE")))
         .andExpect(status().isBadRequest())
         .andExpect(jsonPath("$.code").value("INVALID_REQUEST"));
     verifyNoInteractions(enrollmentService);
@@ -195,7 +217,8 @@ class EnrollmentControllerTest {
   @Test
   void getWithNonNumericEmployeeHeaderIsBadRequest() throws Exception {
     mockMvc
-        .perform(get("/api/v1/enrollments/101").header("X-Employee-Id", "abc"))
+        .perform(
+            get("/api/v1/enrollments/101").header("X-Employee-Id", "abc").with(as(1L, "EMPLOYEE")))
         .andExpect(status().isBadRequest())
         .andExpect(jsonPath("$.code").value("INVALID_REQUEST"));
     verifyNoInteractions(enrollmentService);
@@ -204,7 +227,10 @@ class EnrollmentControllerTest {
   @Test
   void cancelWithNonNumericEmployeeHeaderIsBadRequest() throws Exception {
     mockMvc
-        .perform(post("/api/v1/enrollments/100/cancel").header("X-Employee-Id", "abc"))
+        .perform(
+            post("/api/v1/enrollments/100/cancel")
+                .header("X-Employee-Id", "abc")
+                .with(as(1L, "EMPLOYEE")))
         .andExpect(status().isBadRequest())
         .andExpect(jsonPath("$.code").value("INVALID_REQUEST"));
     verifyNoInteractions(enrollmentService);
@@ -218,7 +244,10 @@ class EnrollmentControllerTest {
             new EnrollmentResponse(100L, 10L, EnrollmentStatus.CANCELLED, now, now, null, false));
 
     mockMvc
-        .perform(post("/api/v1/enrollments/100/cancel").header("X-Employee-Id", "1"))
+        .perform(
+            post("/api/v1/enrollments/100/cancel")
+                .header("X-Employee-Id", "1")
+                .with(as(1L, "EMPLOYEE")))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.id").value(100))
         .andExpect(jsonPath("$.status").value("CANCELLED"));
@@ -230,7 +259,10 @@ class EnrollmentControllerTest {
         .willThrow(new EnrollmentNotFoundException(100L));
 
     mockMvc
-        .perform(post("/api/v1/enrollments/100/cancel").header("X-Employee-Id", "1"))
+        .perform(
+            post("/api/v1/enrollments/100/cancel")
+                .header("X-Employee-Id", "1")
+                .with(as(1L, "EMPLOYEE")))
         .andExpect(status().isNotFound())
         .andExpect(jsonPath("$.code").value("ENROLLMENT_NOT_FOUND"));
   }
@@ -242,7 +274,10 @@ class EnrollmentControllerTest {
             new ConflictException("ENROLLMENT_NOT_CANCELLABLE", "취소할 수 없는 신청입니다: CANCELLED"));
 
     mockMvc
-        .perform(post("/api/v1/enrollments/100/cancel").header("X-Employee-Id", "1"))
+        .perform(
+            post("/api/v1/enrollments/100/cancel")
+                .header("X-Employee-Id", "1")
+                .with(as(1L, "EMPLOYEE")))
         .andExpect(status().isConflict())
         .andExpect(jsonPath("$.code").value("ENROLLMENT_NOT_CANCELLABLE"));
   }
@@ -253,7 +288,10 @@ class EnrollmentControllerTest {
         .willThrow(new ConflictException("SESSION_ALREADY_STARTED", "이미 시작된 회차입니다."));
 
     mockMvc
-        .perform(post("/api/v1/enrollments/100/cancel").header("X-Employee-Id", "1"))
+        .perform(
+            post("/api/v1/enrollments/100/cancel")
+                .header("X-Employee-Id", "1")
+                .with(as(1L, "EMPLOYEE")))
         .andExpect(status().isConflict())
         .andExpect(jsonPath("$.code").value("SESSION_ALREADY_STARTED"));
   }
@@ -261,7 +299,7 @@ class EnrollmentControllerTest {
   @Test
   void cancelWithoutEmployeeHeaderIsBadRequest() throws Exception {
     mockMvc
-        .perform(post("/api/v1/enrollments/100/cancel"))
+        .perform(post("/api/v1/enrollments/100/cancel").with(as(1L, "EMPLOYEE")))
         .andExpect(status().isBadRequest())
         .andExpect(jsonPath("$.code").value("INVALID_REQUEST"));
     verifyNoInteractions(enrollmentService);
@@ -270,7 +308,10 @@ class EnrollmentControllerTest {
   @Test
   void cancelWithNonNumericEnrollmentIdIsBadRequest() throws Exception {
     mockMvc
-        .perform(post("/api/v1/enrollments/abc/cancel").header("X-Employee-Id", "1"))
+        .perform(
+            post("/api/v1/enrollments/abc/cancel")
+                .header("X-Employee-Id", "1")
+                .with(as(1L, "EMPLOYEE")))
         .andExpect(status().isBadRequest())
         .andExpect(jsonPath("$.code").value("INVALID_REQUEST"));
     verifyNoInteractions(enrollmentService);
