@@ -1,10 +1,31 @@
 import type { CourseRequest, SessionRequest, SessionResponse } from '@eduhub/api-client';
-import { Alert, Badge, Box, Button, Container, Group, Loader, Paper, Table, Text, Title } from '@mantine/core';
+import {
+  ActionIcon,
+  Alert,
+  Anchor,
+  Badge,
+  Breadcrumbs,
+  Button,
+  Card,
+  Container,
+  Group,
+  Menu,
+  Skeleton,
+  Stack,
+  Table,
+  Text,
+  Title,
+} from '@mantine/core';
+import { modals } from '@mantine/modals';
+import { notifications } from '@mantine/notifications';
+import { IconCalendarOff, IconDots, IconPencil, IconSearchOff } from '@tabler/icons-react';
 import { useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { getErrorMessage } from '../api/errorMessage';
 import { CourseFormDialog } from '../components/CourseFormDialog';
+import { EmptyState } from '../components/EmptyState';
 import { SessionFormDialog } from '../components/SessionFormDialog';
+import { categoryColor } from '../constants/categories';
 import {
   COURSE_STATUS_COLOR,
   COURSE_STATUS_LABEL,
@@ -33,7 +54,7 @@ export function AdminCoursePage() {
   const actions = useCourseAdminActions();
   const reload = () => setReloadKey((k) => k + 1);
 
-  // 대화상자의 초깃값은 열려 있는 동안 바뀌지 않아야 입력이 초기화되지 않는다.
+  // 서랍의 초깃값은 열려 있는 동안 바뀌지 않아야 입력이 초기화되지 않는다.
   const courseInitial = useMemo<CourseRequest | undefined>(
     () =>
       data
@@ -55,70 +76,97 @@ export function AdminCoursePage() {
 
   const isOpen = data?.status === 'OPEN';
   const sessions = data?.sessions ?? [];
+  const color = categoryColor(data?.category);
 
   const handleCourseSubmit = async (body: CourseRequest) => {
     await actions.updateCourse(courseId, body);
     setCourseDialogOpen(false);
+    notifications.show({ color: 'teal', message: '과정 정보를 저장했습니다.' });
     reload();
   };
 
   const handleSessionSubmit = async (body: SessionRequest) => {
     if (sessionDialog?.mode === 'edit' && sessionDialog.session.id != null) {
       await actions.updateSession(sessionDialog.session.id, body);
+      notifications.show({ color: 'teal', message: '회차를 저장했습니다.' });
     } else {
       await actions.createSession(courseId, body);
+      notifications.show({ color: 'teal', message: '회차를 추가했습니다.' });
     }
     setSessionDialog(null);
     reload();
   };
 
-  const handleCloseSession = async (session: SessionResponse) => {
+  const closeSession = async (session: SessionResponse) => {
     if (session.id == null) return;
-    if (!window.confirm(`${formatDateTime(session.startAt)} 회차의 모집을 마감할까요?`)) return;
     setActionError(null);
     try {
       await actions.closeSession(session.id);
+      notifications.show({ color: 'teal', message: '회차 모집을 마감했습니다.' });
       reload();
     } catch (err) {
       setActionError(getErrorMessage(err));
     }
   };
 
+  // window.confirm 대신 확인 창을 띄우고, 확인하면 마감한다.
+  const confirmCloseSession = (session: SessionResponse) => {
+    modals.openConfirmModal({
+      title: '모집 마감',
+      children: <Text size="sm">{`${formatDateTime(session.startAt)} 회차의 모집을 마감할까요?`}</Text>,
+      labels: { confirm: '모집 마감', cancel: '취소' },
+      confirmProps: { color: 'red' },
+      onConfirm: () => closeSession(session),
+    });
+  };
+
   return (
-    <Box bg="gray.0" mih="100vh" py="xl">
-      <Container size="lg">
-        <Button component={Link} to="/admin/courses" variant="subtle" mb="md">
-          ← 과정 관리로
-        </Button>
+    <Container size="lg" p={0}>
+      <Breadcrumbs mb="md">
+        <Anchor component={Link} to="/admin/courses" size="sm">
+          과정 관리
+        </Anchor>
+        <Text size="sm" c="dimmed" aria-current="page">
+          {data?.title ?? '과정 정보'}
+        </Text>
+      </Breadcrumbs>
 
-        {loading && (
-          <Group justify="center" py="xl">
-            <Loader aria-label="불러오는 중" />
-          </Group>
-        )}
-        {notFound && (
-          <Alert color="yellow" mb="md">
-            과정을 찾을 수 없습니다.
-          </Alert>
-        )}
-        {error && (
-          <Alert color="red" mb="md">
-            과정 정보를 불러오지 못했습니다. ({error.message})
-          </Alert>
-        )}
-        {actionError && (
-          <Alert color="red" mb="md" withCloseButton onClose={() => setActionError(null)}>
-            {actionError}
-          </Alert>
-        )}
+      {loading && (
+        <Stack role="status" aria-label="불러오는 중" aria-busy="true" gap="md">
+          <Skeleton height={160} radius="lg" />
+          <Skeleton height={200} radius="lg" />
+        </Stack>
+      )}
+      {notFound && (
+        <EmptyState
+          icon={<IconSearchOff size={28} />}
+          title="과정을 찾을 수 없습니다."
+          action={
+            <Button component={Link} to="/admin/courses" variant="default">
+              과정 관리로
+            </Button>
+          }
+        />
+      )}
+      {error && (
+        <Alert color="red" mb="md">
+          과정 정보를 불러오지 못했습니다. ({error.message})
+        </Alert>
+      )}
+      {actionError && (
+        <Alert color="red" mb="md" withCloseButton onClose={() => setActionError(null)}>
+          {actionError}
+        </Alert>
+      )}
 
-        {data && (
-          <>
-            <Paper withBorder p="md" mb="md">
-              <Group justify="space-between" align="flex-start" mb="xs">
-                <Group gap="sm">
-                  <Title order={2}>{data.title}</Title>
-                  <Badge variant="light" color="gray">
+      {data && (
+        <>
+          <Card withBorder padding="lg" mb="lg">
+            <Card.Section h={6} bg={`${color}.6`} />
+            <Group justify="space-between" align="flex-start" wrap="nowrap" mt="md">
+              <Stack gap="sm">
+                <Group gap="xs">
+                  <Badge variant="light" color={color}>
                     {data.category}
                   </Badge>
                   {data.status && (
@@ -127,93 +175,102 @@ export function AdminCoursePage() {
                     </Badge>
                   )}
                 </Group>
-                <Button variant="default" onClick={() => setCourseDialogOpen(true)}>
-                  과정 정보 수정
-                </Button>
-              </Group>
-              {data.description && (
-                <Text c="dimmed" style={{ whiteSpace: 'pre-line' }}>
-                  {data.description}
-                </Text>
-              )}
-            </Paper>
+                <Title order={2}>{data.title}</Title>
+                {data.description && (
+                  <Text c="dimmed" style={{ whiteSpace: 'pre-line' }}>
+                    {data.description}
+                  </Text>
+                )}
+              </Stack>
+              <Button variant="default" leftSection={<IconPencil size={16} />} onClick={() => setCourseDialogOpen(true)}>
+                과정 정보 수정
+              </Button>
+            </Group>
+          </Card>
 
-            <Paper withBorder>
-              <Group justify="space-between" p="md" pb="xs">
-                <Title order={3}>회차</Title>
-                {/* 종료된 과정에는 회차를 추가할 수 없다 (D-02). */}
+          <Card withBorder padding={0}>
+            <Group justify="space-between" p="md" pb="xs">
+              <Title order={3}>회차</Title>
+              {/* 종료된 과정에는 회차를 추가할 수 없다 (D-02). */}
+              <Group gap="sm">
+                {!isOpen && (
+                  <Text size="sm" c="dimmed">
+                    종료된 과정에는 회차를 추가할 수 없습니다.
+                  </Text>
+                )}
                 <Button disabled={!isOpen} onClick={() => setSessionDialog({ mode: 'create' })}>
                   회차 추가
                 </Button>
               </Group>
-              <Table.ScrollContainer minWidth={600}>
+            </Group>
+            {sessions.length === 0 ? (
+              <EmptyState icon={<IconCalendarOff size={28} />} title="등록된 회차가 없습니다." />
+            ) : (
+              <Table.ScrollContainer minWidth={640}>
                 <Table verticalSpacing="sm" aria-label="회차 관리 목록">
                   <Table.Thead>
                     <Table.Tr>
                       <Table.Th>일정</Table.Th>
                       <Table.Th>장소</Table.Th>
                       <Table.Th ta="right">정원</Table.Th>
+                      <Table.Th ta="right">남은 자리</Table.Th>
                       <Table.Th>상태</Table.Th>
-                      <Table.Th ta="right">관리</Table.Th>
+                      <Table.Th w={60} ta="right">
+                        관리
+                      </Table.Th>
                     </Table.Tr>
                   </Table.Thead>
                   <Table.Tbody>
-                    {sessions.length === 0 ? (
-                      <Table.Tr>
-                        <Table.Td colSpan={5}>
-                          <Text c="dimmed" ta="center">
-                            등록된 회차가 없습니다.
-                          </Text>
+                    {sessions.map((session) => (
+                      <Table.Tr key={session.id}>
+                        <Table.Td>{formatDateTime(session.startAt)}</Table.Td>
+                        <Table.Td>{session.place}</Table.Td>
+                        <Table.Td ta="right">{session.capacity}</Table.Td>
+                        <Table.Td ta="right">{session.remainingSeats ?? '-'}</Table.Td>
+                        <Table.Td>
+                          {session.status ? (
+                            <Badge variant="light" color={SESSION_STATUS_COLOR[session.status] ?? 'gray'}>
+                              {SESSION_STATUS_LABEL[session.status] ?? session.status}
+                            </Badge>
+                          ) : (
+                            '-'
+                          )}
                         </Table.Td>
-                      </Table.Tr>
-                    ) : (
-                      sessions.map((session) => (
-                        <Table.Tr key={session.id}>
-                          <Table.Td>{formatDateTime(session.startAt)}</Table.Td>
-                          <Table.Td>{session.place}</Table.Td>
-                          <Table.Td ta="right">{session.capacity}</Table.Td>
-                          <Table.Td>
-                            {session.status ? (
-                              <Badge variant="light" color={SESSION_STATUS_COLOR[session.status] ?? 'gray'}>
-                                {SESSION_STATUS_LABEL[session.status] ?? session.status}
-                              </Badge>
-                            ) : (
-                              '-'
-                            )}
-                          </Table.Td>
-                          <Table.Td>
-                            {/* 모집 중인 회차만 수정·마감할 수 있다 (D-01). */}
-                            {session.status === 'RECRUITING' && (
-                              <Group gap="xs" justify="flex-end" wrap="nowrap">
-                                <Button
-                                  size="xs"
-                                  variant="light"
-                                  onClick={() => setSessionDialog({ mode: 'edit', session })}
+                        <Table.Td ta="right">
+                          {/* 모집 중인 회차만 수정·마감할 수 있다 (D-01). 아니면 메뉴 버튼을 숨긴다. */}
+                          {session.status === 'RECRUITING' && (
+                            <Menu position="bottom-end" withinPortal>
+                              <Menu.Target>
+                                <ActionIcon
+                                  variant="subtle"
+                                  color="gray"
+                                  aria-label={`${formatDateTime(session.startAt)} 회차 작업`}
                                 >
-                                  수정
-                                </Button>
-                                <Button
-                                  size="xs"
-                                  variant="light"
+                                  <IconDots size={18} />
+                                </ActionIcon>
+                              </Menu.Target>
+                              <Menu.Dropdown>
+                                <Menu.Item onClick={() => setSessionDialog({ mode: 'edit', session })}>수정</Menu.Item>
+                                <Menu.Item
                                   color="red"
                                   disabled={actions.pending}
-                                  onClick={() => handleCloseSession(session)}
+                                  onClick={() => confirmCloseSession(session)}
                                 >
                                   모집 마감
-                                </Button>
-                              </Group>
-                            )}
-                          </Table.Td>
-                        </Table.Tr>
-                      ))
-                    )}
+                                </Menu.Item>
+                              </Menu.Dropdown>
+                            </Menu>
+                          )}
+                        </Table.Td>
+                      </Table.Tr>
+                    ))}
                   </Table.Tbody>
                 </Table>
               </Table.ScrollContainer>
-            </Paper>
-          </>
-        )}
-      </Container>
+            )}
+          </Card>
+        </>
+      )}
 
       <CourseFormDialog
         open={courseDialogOpen}
@@ -227,6 +284,6 @@ export function AdminCoursePage() {
         onClose={() => setSessionDialog(null)}
         onSubmit={handleSessionSubmit}
       />
-    </Box>
+    </Container>
   );
 }

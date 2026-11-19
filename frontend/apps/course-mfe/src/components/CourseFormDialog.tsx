@@ -1,5 +1,5 @@
 import type { CourseRequest } from '@eduhub/api-client';
-import { Alert, Button, Group, Modal, Select, Stack, Textarea, TextInput } from '@mantine/core';
+import { Alert, Button, Drawer, Group, Select, Stack, Textarea, TextInput } from '@mantine/core';
 import { FormEvent, useEffect, useState } from 'react';
 import { getErrorMessage } from '../api/errorMessage';
 import { CATEGORIES } from '../constants/categories';
@@ -9,13 +9,13 @@ interface Props {
   /** 수정할 때의 기존 값. 없으면 등록. */
   initial?: CourseRequest;
   onClose: () => void;
-  /** 실패하면 예외를 던진다. 대화상자가 메시지를 보여 주고 열린 채로 남는다. */
+  /** 실패하면 예외를 던진다. 서랍이 메시지를 보여 주고 열린 채로 남는다. */
   onSubmit: (body: CourseRequest) => Promise<void>;
 }
 
 const EMPTY: CourseRequest = { title: '', category: '', description: '' };
 
-/** 과정 등록·수정 대화상자 (FR-03). */
+/** 과정 등록·수정 서랍 (FR-03). 파일 이름은 이전 대화상자 때 그대로 둔다. */
 export function CourseFormDialog({ open, initial, onClose, onSubmit }: Props) {
   const [form, setForm] = useState<CourseRequest>(EMPTY);
   const [error, setError] = useState<string | null>(null);
@@ -46,7 +46,7 @@ export function CourseFormDialog({ open, initial, onClose, onSubmit }: Props) {
   };
 
   return (
-    <Modal opened={open} onClose={onClose} title={initial ? '과정 수정' : '과정 등록'} size="md" centered>
+    <Drawer opened={open} onClose={onClose} position="right" size="md" title={initial ? '과정 수정' : '과정 등록'}>
       <form onSubmit={handleSubmit}>
         <Stack>
           {error && <Alert color="red">{error}</Alert>}
@@ -60,6 +60,7 @@ export function CourseFormDialog({ open, initial, onClose, onSubmit }: Props) {
           <Select
             label="분류"
             required
+            allowDeselect={false}
             data={[...CATEGORIES]}
             value={form.category || null}
             onChange={(value) => setForm({ ...form, category: value ?? '' })}
@@ -82,6 +83,6 @@ export function CourseFormDialog({ open, initial, onClose, onSubmit }: Props) {
           </Group>
         </Stack>
       </form>
-    </Modal>
+    </Drawer>
   );
 }

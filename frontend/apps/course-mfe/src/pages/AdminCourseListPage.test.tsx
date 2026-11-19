@@ -19,6 +19,12 @@ const actions = {
   closeSession: vi.fn(),
 };
 
+// jsdom에는 레이아웃이 없어 Mantine 메뉴가 숨김 상태로 잡히므로, 메뉴 항목은 모두 hidden 옵션으로 찾는다.
+async function openMenuItem(title: string, name: string) {
+  fireEvent.click(screen.getByRole('button', { name: `${title} 작업` }));
+  return screen.findByRole('menuitem', { name, hidden: true });
+}
+
 function renderPage() {
   return renderWithProviders(
     <MemoryRouter>
@@ -46,15 +52,31 @@ describe('AdminCourseListPage', () => {
     });
   });
 
-  it('종료된 과정도 상태와 함께 보여 주고, 운영 중인 과정만 종료 버튼이 있다', () => {
+  it('종료된 과정도 상태와 함께 보여 주고, 운영 중인 과정만 종료할 수 있다', async () => {
     renderPage();
 
     const rows = within(screen.getByRole('table', { name: '관리자 과정 목록' })).getAllByRole('row');
     expect(rows[1]).toHaveTextContent('Java 기초');
     expect(rows[1]).toHaveTextContent('운영 중');
-    expect(within(rows[1]).getByRole('button', { name: '종료' })).toBeInTheDocument();
     expect(rows[2]).toHaveTextContent('종료');
-    expect(within(rows[2]).queryByRole('button', { name: '종료' })).not.toBeInTheDocument();
+    expect(screen.getByText('전체 2개')).toBeInTheDocument();
+
+    expect(await openMenuItem('Java 기초', '종료')).toBeEnabled();
+    expect(screen.getByRole('menuitem', { name: '관리', hidden: true })).toBeInTheDocument();
+  });
+
+  it('다른 작업이 진행 중이면 종료 메뉴 항목이 비활성화된다', async () => {
+    vi.mocked(useCourseAdminActions).mockReturnValue({ ...actions, pending: true });
+    renderPage();
+
+    expect(await openMenuItem('Java 기초', '종료')).toBeDisabled();
+  });
+
+  it('종료된 과정의 메뉴에는 종료 항목이 없다', async () => {
+    renderPage();
+
+    expect(await openMenuItem('옛 과정', '관리')).toBeInTheDocument();
+    expect(screen.queryByRole('menuitem', { name: '종료', hidden: true })).not.toBeInTheDocument();
   });
 
   it('과정 등록 대화상자에서 저장하면 createCourse를 부른다', async () => {
@@ -79,12 +101,58 @@ describe('AdminCourseListPage', () => {
     );
   });
 
+  it('확인 창에서 취소하면 closeCourse를 부르지 않는다', async () => {
+    renderPage();
+
+    fireEvent.click(await openMenuItem('Java 기초', '종료'));
+    fireEvent.click(await screen.findByRole('button', { name: '취소' }));
+
+    await waitFor(() => expect(screen.queryByRole('button', { name: '취소' })).not.toBeInTheDocument());
+    expect(actions.closeCourse).not.toHaveBeenCalled();
+  });
+
+  it('검색어가 없고 과정이 없으면 등록 안내를 보여 준다', () => {
+    vi.mocked(useAdminCourses).mockReturnValue({
+      data: { content: [], page: 0, size: 20, totalElements: 0 },
+      loading: false,
+      error: null,
+    });
+    renderPage();
+
+    expect(screen.getByText('등록된 과정이 없습니다.')).toBeInTheDocument();
+  });
+
+  it('검색어가 있는데 결과가 없으면 조건 안내를 보여 준다', () => {
+    vi.mocked(useAdminCourses).mockReturnValue({
+      data: { content: [], page: 0, size: 20, totalElements: 0 },
+      loading: false,
+      error: null,
+    });
+    renderPage();
+
+    fireEvent.change(screen.getByLabelText('과정명 검색'), { target: { value: '없는과정' } });
+    fireEvent.click(screen.getByRole('button', { name: '검색' }));
+
+    expect(screen.getByText('조건에 맞는 과정이 없습니다.')).toBeInTheDocument();
+  });
+
+  it('종료에 성공하면 토스트를 보여 준다', async () => {
+    actions.closeCourse.mockResolvedValue({});
+    renderPage();
+
+    fireEvent.click(await openMenuItem('Java 기초', '종료'));
+    fireEvent.click(await screen.findByRole('button', { name: '종료' }));
+
+    expect(await screen.findByText('과정을 종료했습니다.')).toBeInTheDocument();
+  });
+
   it('종료를 확인하면 closeCourse를 부르고, 실패하면 메시지를 보여 준다', async () => {
-    vi.spyOn(window, 'confirm').mockReturnValue(true);
     actions.closeCourse.mockRejectedValue(new Error('이미 종료된 과정입니다.'));
     renderPage();
 
-    fireEvent.click(screen.getByRole('button', { name: '종료' }));
+    fireEvent.click(await openMenuItem('Java 기초', '종료'));
+    // 확인 창의 빨간 "종료" 버튼을 눌러야 호출된다.
+    fireEvent.click(await screen.findByRole('button', { name: '종료' }));
 
     await waitFor(() => expect(actions.closeCourse).toHaveBeenCalledWith(1));
     expect(await screen.findByText('이미 종료된 과정입니다.')).toBeInTheDocument();

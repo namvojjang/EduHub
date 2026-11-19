@@ -1,5 +1,5 @@
 import type { SessionRequest } from '@eduhub/api-client';
-import { Alert, Button, Group, Modal, Stack, TextInput } from '@mantine/core';
+import { Alert, Button, Drawer, Group, Stack, TextInput } from '@mantine/core';
 import { FormEvent, useEffect, useState } from 'react';
 import { getErrorMessage } from '../api/errorMessage';
 
@@ -8,7 +8,7 @@ interface Props {
   /** 수정할 때의 기존 값. 없으면 등록. */
   initial?: SessionRequest;
   onClose: () => void;
-  /** 실패하면 예외를 던진다. 대화상자가 메시지를 보여 주고 열린 채로 남는다. */
+  /** 실패하면 예외를 던진다. 서랍이 메시지를 보여 주고 열린 채로 남는다. */
   onSubmit: (body: SessionRequest) => Promise<void>;
 }
 
@@ -27,7 +27,7 @@ function toForm(initial?: SessionRequest): FormState {
   };
 }
 
-/** 회차 등록·수정 대화상자 (FR-03). 시작 시각은 미래여야 하고 정원은 1 이상이다. */
+/** 회차 등록·수정 서랍 (FR-03). 시작 시각은 미래여야 하고 정원은 1 이상이다. */
 export function SessionFormDialog({ open, initial, onClose, onSubmit }: Props) {
   const [form, setForm] = useState<FormState>(toForm());
   const [error, setError] = useState<string | null>(null);
@@ -59,7 +59,7 @@ export function SessionFormDialog({ open, initial, onClose, onSubmit }: Props) {
   };
 
   return (
-    <Modal opened={open} onClose={onClose} title={initial ? '회차 수정' : '회차 추가'} size="md" centered>
+    <Drawer opened={open} onClose={onClose} position="right" size="md" title={initial ? '회차 수정' : '회차 추가'}>
       <form onSubmit={handleSubmit}>
         <Stack>
           {error && <Alert color="red">{error}</Alert>}
@@ -95,6 +95,6 @@ export function SessionFormDialog({ open, initial, onClose, onSubmit }: Props) {
           </Group>
         </Stack>
       </form>
-    </Modal>
+    </Drawer>
   );
 }
