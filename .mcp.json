@@ -1,16 +1,14 @@
 {
   "mcpServers": {
     "eduhub-db": {
+      "type": "stdio",
       "command": "uvx",
       "args": [
-        "--python", "3.12",
-        "--overrides", ".mcp/postgres-mcp-overrides.txt",
-        "postgres-mcp@0.3.0",
-        "--access-mode=restricted"
-      ],
-      "env": {
-        "DATABASE_URI": "${EDUHUB_DB_READONLY_URL}"
-      }
+        "--from", "postgres-mcp==0.1.0",
+        "--with", "mcp<2",
+        "postgres-mcp",
+        "${EDUHUB_DB_READONLY_URL}"
+      ]
     }
   }
 }

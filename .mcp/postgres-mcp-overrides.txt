@@ -1,6 +1,0 @@
-# .mcp.json의 eduhub-db(postgres-mcp 0.3.0)를 실행할 때 쓰는 uv 의존성 덮어쓰기.
-# - pglast: postgres-mcp 0.3.0이 고정한 pglast==7.2.0이 PyPI에 없어 설치가 안 된다
-# - mcp: mcp 2.x에서 FastMCP가 없어져 postgres-mcp 0.3.0이 시작하자마자 종료된다
-# 버전을 고정하지 않으면 uvx가 고장 난 postgres-mcp 0.1.0을 골라 연결이 실패한다(CONNECTION_CLOSED).
-pglast==7.20
-mcp[cli]<2
