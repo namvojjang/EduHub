@@ -179,13 +179,41 @@ describe('CourseListPage', () => {
     expect(useCoursesMock).toHaveBeenLastCalledWith({ keyword: 'a', category: '', page: 0, size: 20 });
   });
 
-  it('불러오는 중에는 aria-busy와 Skeleton 6개를 보여 준다', () => {
+  it('불러오는 중에는 status 영역(aria-busy)과 Skeleton 6개를 보여 준다', () => {
     useCoursesMock.mockReturnValue({ data: null, loading: true, error: null });
 
     const { container } = renderPage();
 
-    expect(container.querySelector('[aria-busy="true"]')).not.toBeNull();
+    const status = screen.getByRole('status', { name: '불러오는 중' });
+    expect(status).toHaveAttribute('aria-busy', 'true');
     expect(container.querySelectorAll('.mantine-Skeleton-root')).toHaveLength(6);
+  });
+
+  it('표로 바꾼 뒤 검색어가 바뀌어도 표 보기가 유지된다', () => {
+    useCoursesMock.mockReturnValue(twoCourses);
+
+    renderPage();
+    fireEvent.click(screen.getByText('표'));
+    expect(screen.getByRole('table', { name: '과정 목록' })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByText('검색 a'));
+
+    expect(useCoursesMock).toHaveBeenLastCalledWith({ keyword: 'a', category: '', page: 0, size: 20 });
+    expect(screen.getByRole('table', { name: '과정 목록' })).toBeInTheDocument();
+  });
+
+  it('표에서 id가 없는 과정은 링크와 행 클릭 이동을 만들지 않는다', () => {
+    useCoursesMock.mockReturnValue({
+      ...twoCourses,
+      data: { ...twoCourses.data, content: [{ title: 'ID 없는 과정', category: '개발' }], totalElements: 1 },
+    });
+
+    renderPage();
+    fireEvent.click(screen.getByText('표'));
+
+    expect(screen.queryByRole('link', { name: 'ID 없는 과정' })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByText('ID 없는 과정'));
+    expect(screen.queryByText('상세 화면')).not.toBeInTheDocument();
   });
 
   it('오류일 때는 아래 페이지 영역을 숨긴다', () => {

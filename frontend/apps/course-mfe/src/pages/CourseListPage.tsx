@@ -129,7 +129,7 @@ function CourseListView({ keyword, view, onViewChange }: CourseListViewProps) {
       )}
 
       {view === 'card' ? (
-        <div aria-busy={loading}>
+        <div aria-busy={loading} role={loading ? 'status' : undefined} aria-label={loading ? '불러오는 중' : undefined}>
           {loading ? (
             <SimpleGrid cols={{ base: 1, sm: 2, lg: 3 }} mb="md">
               {Array.from({ length: SKELETON_COUNT }, (_, i) => (
@@ -145,7 +145,7 @@ function CourseListView({ keyword, view, onViewChange }: CourseListViewProps) {
           ) : (
             <SimpleGrid cols={{ base: 1, sm: 2, lg: 3 }} mb="md">
               {courses.map((course) => (
-                <CourseCard key={course.id} id={course.id} title={course.title} category={course.category} />
+                <CourseCard key={course.id ?? course.title} id={course.id} title={course.title} category={course.category} />
               ))}
             </SimpleGrid>
           )}
@@ -185,25 +185,33 @@ function CourseListView({ keyword, view, onViewChange }: CourseListViewProps) {
                     </Table.Td>
                   </Table.Tr>
                 ) : (
-                  courses.map((course) => (
-                    <Table.Tr
-                      key={course.id}
-                      style={{ cursor: 'pointer' }}
-                      onClick={() => navigate(`/courses/${course.id}`)}
-                    >
-                      <Table.Td>
-                        {/* 행 전체는 마우스용, 키보드는 제목 링크로 이동 */}
-                        <Anchor component={Link} to={`/courses/${course.id}`} onClick={(e) => e.stopPropagation()}>
-                          {course.title}
-                        </Anchor>
-                      </Table.Td>
-                      <Table.Td>
-                        <Badge variant="light" color={categoryColor(course.category)}>
-                          {course.category}
-                        </Badge>
-                      </Table.Td>
-                    </Table.Tr>
-                  ))
+                  courses.map((course) => {
+                    // id가 없으면 이동할 곳이 없으니 카드처럼 행 클릭·링크를 만들지 않는다.
+                    const id = course.id;
+                    return (
+                      <Table.Tr
+                        key={id ?? course.title}
+                        style={id == null ? undefined : { cursor: 'pointer' }}
+                        onClick={id == null ? undefined : () => navigate(`/courses/${id}`)}
+                      >
+                        <Table.Td>
+                          {/* 행 전체는 마우스용, 키보드는 제목 링크로 이동 */}
+                          {id == null ? (
+                            course.title
+                          ) : (
+                            <Anchor component={Link} to={`/courses/${id}`} onClick={(e) => e.stopPropagation()}>
+                              {course.title}
+                            </Anchor>
+                          )}
+                        </Table.Td>
+                        <Table.Td>
+                          <Badge variant="light" color={categoryColor(course.category)}>
+                            {course.category}
+                          </Badge>
+                        </Table.Td>
+                      </Table.Tr>
+                    );
+                  })
                 )}
               </Table.Tbody>
             </Table>
