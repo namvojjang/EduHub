@@ -129,8 +129,8 @@ React 19로 올릴 때 Mantine 9로 함께 올린다. 문서(루트 `CLAUDE.md`,
 ### 6.5 FR-02 과정 상세
 
 - 브레드크럼(교육과정 › 과정명). 히어로 카드: 분류 색 띠, 분류·상태 Badge, 큰 제목, 설명.
-- 회차는 표 대신 카드 목록(`role="list" aria-label="회차 목록"`, 각 카드 `role="listitem"`): 시작 일시(크게), 장소(아이콘), 상태 Badge, 남은 자리 `Progress`(확정 비율, 남은 0이면 red·"0 (정원 마감)", 20% 이하 orange·"마감 임박", 그 외 teal)와 "남은 자리 n / 정원".
-- 각 회차 카드에 "신청하기" 버튼은 **비활성 + Tooltip "수강 신청 화면 준비 중 (enrollment-mfe)"**. 신청 화면은 이번 범위가 아니다.
+- 회차는 표 대신 카드 목록(`role="list" aria-label="회차 목록"`, 각 카드 `role="listitem"`): 시작 일시(크게), 장소(아이콘), 상태 Badge, 남은 자리 `Progress`(확정 비율, 남은 0이면 red·"0 (정원 마감)", 20% 이하 orange, 그 외 teal; "마감 임박" Badge는 모집 중 회차에만)와 "남은 자리 n / 정원".
+- 각 회차 카드에 "신청하기" 버튼은 **비활성 + Tooltip "수강 신청 화면 준비 중 (enrollment-mfe)"**. 키보드·스크린리더 사용자를 위해 항상 보이는 안내 문구 "수강 신청 화면 준비 중"을 두고 버튼에 `aria-describedby`로 연결한다. 신청 화면은 이번 범위가 아니다.
 - 로딩 Skeleton, 없음은 `EmptyState`("과정을 찾을 수 없습니다." + 목록으로), 회차 없음은 `EmptyState`.
 
 ### 6.6 FR-03 관리자

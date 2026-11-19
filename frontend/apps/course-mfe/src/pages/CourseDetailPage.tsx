@@ -1,55 +1,76 @@
-import { Alert, Badge, Box, Button, Container, Group, Loader, Paper, Table, Text, Title } from '@mantine/core';
-import { Link, useParams } from 'react-router-dom';
 import {
-  COURSE_STATUS_COLOR,
-  COURSE_STATUS_LABEL,
-  SESSION_STATUS_COLOR,
-  SESSION_STATUS_LABEL,
-} from '../constants/statusLabels';
+  Alert,
+  Anchor,
+  Badge,
+  Breadcrumbs,
+  Button,
+  Card,
+  Container,
+  Group,
+  Skeleton,
+  Stack,
+  Text,
+  Title,
+} from '@mantine/core';
+import { IconCalendarOff, IconSearchOff } from '@tabler/icons-react';
+import { Link, useParams } from 'react-router-dom';
+import { EmptyState } from '../components/EmptyState';
+import { SessionCard } from '../components/SessionCard';
+import { categoryColor } from '../constants/categories';
+import { COURSE_STATUS_COLOR, COURSE_STATUS_LABEL } from '../constants/statusLabels';
 import { useCourseDetail } from '../hooks/useCourseDetail';
-
-/** "2026-12-01T09:00:00" → "2026-12-01 09:00" */
-function formatDateTime(value?: string): string {
-  return value ? value.replace('T', ' ').slice(0, 16) : '-';
-}
 
 /** 과정 상세 화면 (FR-02). 데이터는 useCourseDetail로만 가져온다. */
 export function CourseDetailPage() {
   const { id } = useParams();
   const { data, loading, notFound, error } = useCourseDetail(Number(id));
   const sessions = data?.sessions ?? [];
+  const color = categoryColor(data?.category);
 
   return (
-    <Box bg="gray.0" mih="100vh" py="xl">
-      <Container size="lg">
-        <Button component={Link} to="/" variant="subtle" mb="md">
-          ← 목록으로
-        </Button>
+    <Container size="lg" p={0}>
+      <Breadcrumbs mb="md">
+        <Anchor component={Link} to="/" size="sm">
+          교육과정
+        </Anchor>
+        <Text size="sm" c="dimmed" aria-current="page">
+          {data?.title ?? '과정 상세'}
+        </Text>
+      </Breadcrumbs>
 
-        {loading && (
-          <Group justify="center" py="xl">
-            <Loader aria-label="불러오는 중" />
-          </Group>
-        )}
+      {loading && (
+        <Stack role="status" aria-label="불러오는 중" aria-busy="true" gap="md">
+          <Skeleton height={160} radius="lg" />
+          <Skeleton height={110} radius="lg" />
+          <Skeleton height={110} radius="lg" />
+        </Stack>
+      )}
 
-        {notFound && (
-          <Alert color="yellow" mb="md">
-            과정을 찾을 수 없습니다.
-          </Alert>
-        )}
+      {notFound && (
+        <EmptyState
+          icon={<IconSearchOff size={28} />}
+          title="과정을 찾을 수 없습니다."
+          action={
+            <Button component={Link} to="/" variant="default">
+              목록으로
+            </Button>
+          }
+        />
+      )}
 
-        {error && (
-          <Alert color="red" mb="md">
-            과정 정보를 불러오지 못했습니다. ({error.message})
-          </Alert>
-        )}
+      {error && (
+        <Alert color="red" mb="md">
+          과정 정보를 불러오지 못했습니다. ({error.message})
+        </Alert>
+      )}
 
-        {data && (
-          <>
-            <Paper withBorder p="md" mb="md">
-              <Group gap="sm" mb="xs">
-                <Title order={2}>{data.title}</Title>
-                <Badge variant="light" color="gray">
+      {data && (
+        <>
+          <Card withBorder padding="lg" mb="lg">
+            <Card.Section h={6} bg={`${color}.6`} />
+            <Stack gap="sm" mt="md">
+              <Group gap="xs">
+                <Badge variant="light" color={color}>
                   {data.category}
                 </Badge>
                 {data.status && (
@@ -58,71 +79,39 @@ export function CourseDetailPage() {
                   </Badge>
                 )}
               </Group>
+              <Title order={2}>{data.title}</Title>
               {data.description && (
                 <Text c="dimmed" style={{ whiteSpace: 'pre-line' }}>
                   {data.description}
                 </Text>
               )}
-            </Paper>
+            </Stack>
+          </Card>
 
-            <Paper withBorder>
-              <Title order={3} p="md" pb="xs">
-                회차
-              </Title>
-              <Table.ScrollContainer minWidth={600}>
-                <Table verticalSpacing="sm" aria-label="회차 목록">
-                  <Table.Thead>
-                    <Table.Tr>
-                      <Table.Th>일정</Table.Th>
-                      <Table.Th>장소</Table.Th>
-                      <Table.Th ta="right">정원</Table.Th>
-                      <Table.Th ta="right">남은 자리</Table.Th>
-                      <Table.Th>상태</Table.Th>
-                    </Table.Tr>
-                  </Table.Thead>
-                  <Table.Tbody>
-                    {sessions.length === 0 ? (
-                      <Table.Tr>
-                        <Table.Td colSpan={5}>
-                          <Text c="dimmed" ta="center">
-                            등록된 회차가 없습니다.
-                          </Text>
-                        </Table.Td>
-                      </Table.Tr>
-                    ) : (
-                      sessions.map((session) => (
-                        <Table.Tr key={session.id}>
-                          <Table.Td>{formatDateTime(session.startAt)}</Table.Td>
-                          <Table.Td>{session.place}</Table.Td>
-                          <Table.Td ta="right">{session.capacity}</Table.Td>
-                          <Table.Td ta="right">
-                            {session.remainingSeats === 0 ? (
-                              <Text span c="red" fw={600}>
-                                0 (정원 마감)
-                              </Text>
-                            ) : (
-                              session.remainingSeats
-                            )}
-                          </Table.Td>
-                          <Table.Td>
-                            {session.status ? (
-                              <Badge variant="light" color={SESSION_STATUS_COLOR[session.status] ?? 'gray'}>
-                                {SESSION_STATUS_LABEL[session.status] ?? session.status}
-                              </Badge>
-                            ) : (
-                              '-'
-                            )}
-                          </Table.Td>
-                        </Table.Tr>
-                      ))
-                    )}
-                  </Table.Tbody>
-                </Table>
-              </Table.ScrollContainer>
-            </Paper>
-          </>
-        )}
-      </Container>
-    </Box>
+          <Title order={3} mb="sm">
+            회차
+          </Title>
+          {sessions.length === 0 ? (
+            <Card withBorder>
+              <EmptyState icon={<IconCalendarOff size={28} />} title="등록된 회차가 없습니다." />
+            </Card>
+          ) : (
+            <Stack gap="md" role="list" aria-label="회차 목록">
+              {sessions.map((session) => (
+                <div key={session.id} role="listitem">
+                  <SessionCard
+                    startAt={session.startAt}
+                    place={session.place}
+                    capacity={session.capacity}
+                    remainingSeats={session.remainingSeats}
+                    status={session.status}
+                  />
+                </div>
+              ))}
+            </Stack>
+          )}
+        </>
+      )}
+    </Container>
   );
 }
