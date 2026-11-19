@@ -79,6 +79,18 @@ describe('AdminCourseListPage', () => {
     expect(screen.queryByRole('menuitem', { name: '종료', hidden: true })).not.toBeInTheDocument();
   });
 
+  it('id가 없는 과정의 메뉴에는 관리 항목이 없다', async () => {
+    vi.mocked(useAdminCourses).mockReturnValue({
+      data: { content: [{ title: '번호 없는 과정', category: '개발', status: 'OPEN' }], page: 0, size: 20, totalElements: 1 },
+      loading: false,
+      error: null,
+    });
+    renderPage();
+
+    expect(await openMenuItem('번호 없는 과정', '종료')).toBeInTheDocument();
+    expect(screen.queryByRole('menuitem', { name: '관리', hidden: true })).not.toBeInTheDocument();
+  });
+
   it('과정 등록 대화상자에서 저장하면 createCourse를 부른다', async () => {
     actions.createCourse.mockResolvedValue({});
     renderPage();
@@ -134,6 +146,18 @@ describe('AdminCourseListPage', () => {
     fireEvent.click(screen.getByRole('button', { name: '검색' }));
 
     expect(screen.getByText('조건에 맞는 과정이 없습니다.')).toBeInTheDocument();
+  });
+
+  it('분류를 고르지 않고 저장하면 createCourse를 부르지 않고 안내를 보여 준다', async () => {
+    renderPage();
+
+    fireEvent.click(screen.getByRole('button', { name: '과정 등록' }));
+    const dialog = await screen.findByRole('dialog');
+    fireEvent.change(within(dialog).getByLabelText(/과정명/), { target: { value: 'React 입문' } });
+    fireEvent.click(within(dialog).getByRole('button', { name: '저장' }));
+
+    expect(await within(dialog).findByText('분류를 선택하세요.')).toBeInTheDocument();
+    expect(actions.createCourse).not.toHaveBeenCalled();
   });
 
   it('종료에 성공하면 토스트를 보여 준다', async () => {

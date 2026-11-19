@@ -20,16 +20,23 @@ export function CourseFormDialog({ open, initial, onClose, onSubmit }: Props) {
   const [form, setForm] = useState<CourseRequest>(EMPTY);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [categoryError, setCategoryError] = useState<string | null>(null);
 
   useEffect(() => {
     if (open) {
       setForm(initial ?? EMPTY);
       setError(null);
+      setCategoryError(null);
     }
   }, [open, initial]);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
+    // Select의 보이는 입력은 readOnly라 브라우저 required 검증이 빠지므로 직접 확인한다.
+    if (!form.category) {
+      setCategoryError('분류를 선택하세요.');
+      return;
+    }
     setSaving(true);
     setError(null);
     try {
@@ -61,9 +68,13 @@ export function CourseFormDialog({ open, initial, onClose, onSubmit }: Props) {
             label="분류"
             required
             allowDeselect={false}
+            error={categoryError}
             data={[...CATEGORIES]}
             value={form.category || null}
-            onChange={(value) => setForm({ ...form, category: value ?? '' })}
+            onChange={(value) => {
+              setForm({ ...form, category: value ?? '' });
+              setCategoryError(null);
+            }}
           />
           <Textarea
             label="설명"

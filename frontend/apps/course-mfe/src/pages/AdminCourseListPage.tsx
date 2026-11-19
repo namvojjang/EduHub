@@ -195,13 +195,16 @@ export function AdminCourseListPage() {
                           </ActionIcon>
                         </Menu.Target>
                         <Menu.Dropdown>
-                          <Menu.Item
-                            component={Link}
-                            to={`/admin/courses/${course.id}`}
-                            leftSection={<IconSettings size={16} />}
-                          >
-                            관리
-                          </Menu.Item>
+                          {/* id가 없으면 이동할 곳이 없으므로 항목을 그리지 않는다. */}
+                          {course.id != null && (
+                            <Menu.Item
+                              component={Link}
+                              to={`/admin/courses/${course.id}`}
+                              leftSection={<IconSettings size={16} />}
+                            >
+                              관리
+                            </Menu.Item>
+                          )}
                           {course.status === 'OPEN' && (
                             <Menu.Item color="red" disabled={actions.pending} onClick={() => confirmClose(course)}>
                               종료

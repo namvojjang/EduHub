@@ -65,7 +65,8 @@ function CourseListView({ keyword, view, onViewChange }: CourseListViewProps) {
   };
 
   const clearFilters = () => {
-    clearKeyword();
+    // keyword가 있을 때만 URL을 바꿔 불필요한 히스토리를 쌓지 않는다.
+    if (keyword !== '') clearKeyword();
     setCategory('');
     setPage(0);
   };
