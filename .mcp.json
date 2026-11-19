@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "eduhub-db": {
+      "type": "stdio",
+      "command": "uvx",
+      "args": [
+        "--from", "postgres-mcp==0.1.0",
+        "--with", "mcp<2",
+        "postgres-mcp",
+        "${EDUHUB_DB_READONLY_URL}"
+      ]
+    }
+  }
+}
