@@ -18,6 +18,13 @@ public interface EnrollmentRepository extends JpaRepository<Enrollment, Long> {
   Optional<Long> findSessionIdByIdAndEmployeeId(
       @Param("id") Long id, @Param("employeeId") Long employeeId);
 
+  /** FR-02 남은 자리: 회차별 해당 상태 신청 수를 쿼리 1번으로. 행은 {sessionId, count}. 신청이 없는 회차는 행이 없다. */
+  @Query(
+      "select e.session.id, count(e) from Enrollment e"
+          + " where e.session.id in :ids and e.status in :statuses group by e.session.id")
+  List<Object[]> countBySessionIds(
+      @Param("ids") Collection<Long> ids, @Param("statuses") Collection<EnrollmentStatus> statuses);
+
   /** 대기 순번 = 이 값 + 1. 같은 회차 WAITING 중 (appliedAt, id)가 앞선 수 (FR-05, D-04, 설계명세 Q1). */
   @Query(
       "select count(e) from Enrollment e where e.session.id = :sessionId and e.status = :status"
