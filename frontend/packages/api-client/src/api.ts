@@ -256,6 +256,87 @@ export interface ErrorResponse {
 /**
  * 
  * @export
+ * @interface LoginRequest
+ */
+export interface LoginRequest {
+    /**
+     * 
+     * @type {string}
+     * @memberof LoginRequest
+     */
+    'employeeNo': string;
+    /**
+     * 
+     * @type {string}
+     * @memberof LoginRequest
+     */
+    'password': string;
+}
+/**
+ * 
+ * @export
+ * @interface LoginResponse
+ */
+export interface LoginResponse {
+    /**
+     * 
+     * @type {string}
+     * @memberof LoginResponse
+     */
+    'accessToken'?: string;
+    /**
+     * 
+     * @type {string}
+     * @memberof LoginResponse
+     */
+    'tokenType'?: string;
+    /**
+     * 
+     * @type {number}
+     * @memberof LoginResponse
+     */
+    'expiresIn'?: number;
+    /**
+     * 
+     * @type {MeResponse}
+     * @memberof LoginResponse
+     */
+    'user'?: MeResponse;
+}
+/**
+ * 
+ * @export
+ * @interface MeResponse
+ */
+export interface MeResponse {
+    /**
+     * 
+     * @type {number}
+     * @memberof MeResponse
+     */
+    'employeeId'?: number;
+    /**
+     * 
+     * @type {string}
+     * @memberof MeResponse
+     */
+    'employeeNo'?: string;
+    /**
+     * 
+     * @type {string}
+     * @memberof MeResponse
+     */
+    'name'?: string;
+    /**
+     * 
+     * @type {string}
+     * @memberof MeResponse
+     */
+    'role'?: string;
+}
+/**
+ * 
+ * @export
  * @interface PageResponseAdminCourseSummaryResponse
  */
 export interface PageResponseAdminCourseSummaryResponse {
@@ -391,6 +472,177 @@ export const SessionResponseStatusEnum = {
 } as const;
 
 export type SessionResponseStatusEnum = typeof SessionResponseStatusEnum[keyof typeof SessionResponseStatusEnum];
+
+
+/**
+ * AuthApi - axios parameter creator
+ * @export
+ */
+export const AuthApiAxiosParamCreator = function (configuration?: Configuration) {
+    return {
+        /**
+         * 
+         * @summary 현재 로그인한 사용자 (토큰의 정보)
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        getMe: async (options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+            const localVarPath = `/api/v1/me`;
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'GET', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+            // authentication bearerAuth required
+            // http bearer authentication required
+            await setBearerAuthToObject(localVarHeaderParameter, configuration)
+
+
+    
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+        /**
+         * 
+         * @summary 사번·비밀번호로 로그인 (JWT 발급)
+         * @param {LoginRequest} loginRequest 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        login: async (loginRequest: LoginRequest, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'loginRequest' is not null or undefined
+            assertParamExists('login', 'loginRequest', loginRequest)
+            const localVarPath = `/api/v1/auth/login`;
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'POST', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+
+    
+            localVarHeaderParameter['Content-Type'] = 'application/json';
+
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+            localVarRequestOptions.data = serializeDataIfNeeded(loginRequest, localVarRequestOptions, configuration)
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+    }
+};
+
+/**
+ * AuthApi - functional programming interface
+ * @export
+ */
+export const AuthApiFp = function(configuration?: Configuration) {
+    const localVarAxiosParamCreator = AuthApiAxiosParamCreator(configuration)
+    return {
+        /**
+         * 
+         * @summary 현재 로그인한 사용자 (토큰의 정보)
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async getMe(options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<MeResponse>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.getMe(options);
+            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+        },
+        /**
+         * 
+         * @summary 사번·비밀번호로 로그인 (JWT 발급)
+         * @param {LoginRequest} loginRequest 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async login(loginRequest: LoginRequest, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<LoginResponse>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.login(loginRequest, options);
+            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+        },
+    }
+};
+
+/**
+ * AuthApi - factory interface
+ * @export
+ */
+export const AuthApiFactory = function (configuration?: Configuration, basePath?: string, axios?: AxiosInstance) {
+    const localVarFp = AuthApiFp(configuration)
+    return {
+        /**
+         * 
+         * @summary 현재 로그인한 사용자 (토큰의 정보)
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        getMe(options?: any): AxiosPromise<MeResponse> {
+            return localVarFp.getMe(options).then((request) => request(axios, basePath));
+        },
+        /**
+         * 
+         * @summary 사번·비밀번호로 로그인 (JWT 발급)
+         * @param {LoginRequest} loginRequest 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        login(loginRequest: LoginRequest, options?: any): AxiosPromise<LoginResponse> {
+            return localVarFp.login(loginRequest, options).then((request) => request(axios, basePath));
+        },
+    };
+};
+
+/**
+ * AuthApi - object-oriented interface
+ * @export
+ * @class AuthApi
+ * @extends {BaseAPI}
+ */
+export class AuthApi extends BaseAPI {
+    /**
+     * 
+     * @summary 현재 로그인한 사용자 (토큰의 정보)
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof AuthApi
+     */
+    public getMe(options?: AxiosRequestConfig) {
+        return AuthApiFp(this.configuration).getMe(options).then((request) => request(this.axios, this.basePath));
+    }
+
+    /**
+     * 
+     * @summary 사번·비밀번호로 로그인 (JWT 발급)
+     * @param {LoginRequest} loginRequest 
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof AuthApi
+     */
+    public login(loginRequest: LoginRequest, options?: AxiosRequestConfig) {
+        return AuthApiFp(this.configuration).login(loginRequest, options).then((request) => request(this.axios, this.basePath));
+    }
+}
 
 
 /**
@@ -627,6 +879,10 @@ export const CourseAdminApiAxiosParamCreator = function (configuration?: Configu
             const localVarHeaderParameter = {} as any;
             const localVarQueryParameter = {} as any;
 
+            // authentication bearerAuth required
+            // http bearer authentication required
+            await setBearerAuthToObject(localVarHeaderParameter, configuration)
+
 
     
             setSearchParams(localVarUrlObj, localVarQueryParameter);
@@ -661,6 +917,10 @@ export const CourseAdminApiAxiosParamCreator = function (configuration?: Configu
             const localVarHeaderParameter = {} as any;
             const localVarQueryParameter = {} as any;
 
+            // authentication bearerAuth required
+            // http bearer authentication required
+            await setBearerAuthToObject(localVarHeaderParameter, configuration)
+
 
     
             setSearchParams(localVarUrlObj, localVarQueryParameter);
@@ -693,6 +953,10 @@ export const CourseAdminApiAxiosParamCreator = function (configuration?: Configu
             const localVarRequestOptions = { method: 'POST', ...baseOptions, ...options};
             const localVarHeaderParameter = {} as any;
             const localVarQueryParameter = {} as any;
+
+            // authentication bearerAuth required
+            // http bearer authentication required
+            await setBearerAuthToObject(localVarHeaderParameter, configuration)
 
 
     
@@ -734,6 +998,10 @@ export const CourseAdminApiAxiosParamCreator = function (configuration?: Configu
             const localVarHeaderParameter = {} as any;
             const localVarQueryParameter = {} as any;
 
+            // authentication bearerAuth required
+            // http bearer authentication required
+            await setBearerAuthToObject(localVarHeaderParameter, configuration)
+
 
     
             localVarHeaderParameter['Content-Type'] = 'application/json';
@@ -771,6 +1039,10 @@ export const CourseAdminApiAxiosParamCreator = function (configuration?: Configu
             const localVarRequestOptions = { method: 'GET', ...baseOptions, ...options};
             const localVarHeaderParameter = {} as any;
             const localVarQueryParameter = {} as any;
+
+            // authentication bearerAuth required
+            // http bearer authentication required
+            await setBearerAuthToObject(localVarHeaderParameter, configuration)
 
             if (keyword !== undefined) {
                 localVarQueryParameter['keyword'] = keyword;
@@ -829,6 +1101,10 @@ export const CourseAdminApiAxiosParamCreator = function (configuration?: Configu
             const localVarHeaderParameter = {} as any;
             const localVarQueryParameter = {} as any;
 
+            // authentication bearerAuth required
+            // http bearer authentication required
+            await setBearerAuthToObject(localVarHeaderParameter, configuration)
+
 
     
             localVarHeaderParameter['Content-Type'] = 'application/json';
@@ -868,6 +1144,10 @@ export const CourseAdminApiAxiosParamCreator = function (configuration?: Configu
             const localVarRequestOptions = { method: 'PUT', ...baseOptions, ...options};
             const localVarHeaderParameter = {} as any;
             const localVarQueryParameter = {} as any;
+
+            // authentication bearerAuth required
+            // http bearer authentication required
+            await setBearerAuthToObject(localVarHeaderParameter, configuration)
 
 
     
@@ -1176,14 +1456,11 @@ export const EnrollmentApiAxiosParamCreator = function (configuration?: Configur
         /**
          * 
          * @summary 수강 신청 (정원이 차면 대기)
-         * @param {number} xEmployeeId 
          * @param {EnrollmentRequest} enrollmentRequest 
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        applyEnrollment: async (xEmployeeId: number, enrollmentRequest: EnrollmentRequest, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
-            // verify required parameter 'xEmployeeId' is not null or undefined
-            assertParamExists('applyEnrollment', 'xEmployeeId', xEmployeeId)
+        applyEnrollment: async (enrollmentRequest: EnrollmentRequest, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
             // verify required parameter 'enrollmentRequest' is not null or undefined
             assertParamExists('applyEnrollment', 'enrollmentRequest', enrollmentRequest)
             const localVarPath = `/api/v1/enrollments`;
@@ -1198,9 +1475,9 @@ export const EnrollmentApiAxiosParamCreator = function (configuration?: Configur
             const localVarHeaderParameter = {} as any;
             const localVarQueryParameter = {} as any;
 
-            if (xEmployeeId !== undefined && xEmployeeId !== null) {
-                localVarHeaderParameter['X-Employee-Id'] = String(JSON.stringify(xEmployeeId));
-            }
+            // authentication bearerAuth required
+            // http bearer authentication required
+            await setBearerAuthToObject(localVarHeaderParameter, configuration)
 
 
     
@@ -1219,14 +1496,11 @@ export const EnrollmentApiAxiosParamCreator = function (configuration?: Configur
         /**
          * 
          * @summary 내 신청 취소 (확정 취소 시 대기 1순위 자동 확정)
-         * @param {number} xEmployeeId 
          * @param {number} enrollmentId 
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        cancelEnrollment: async (xEmployeeId: number, enrollmentId: number, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
-            // verify required parameter 'xEmployeeId' is not null or undefined
-            assertParamExists('cancelEnrollment', 'xEmployeeId', xEmployeeId)
+        cancelEnrollment: async (enrollmentId: number, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
             // verify required parameter 'enrollmentId' is not null or undefined
             assertParamExists('cancelEnrollment', 'enrollmentId', enrollmentId)
             const localVarPath = `/api/v1/enrollments/{enrollmentId}/cancel`
@@ -1242,9 +1516,9 @@ export const EnrollmentApiAxiosParamCreator = function (configuration?: Configur
             const localVarHeaderParameter = {} as any;
             const localVarQueryParameter = {} as any;
 
-            if (xEmployeeId !== undefined && xEmployeeId !== null) {
-                localVarHeaderParameter['X-Employee-Id'] = String(JSON.stringify(xEmployeeId));
-            }
+            // authentication bearerAuth required
+            // http bearer authentication required
+            await setBearerAuthToObject(localVarHeaderParameter, configuration)
 
 
     
@@ -1260,14 +1534,11 @@ export const EnrollmentApiAxiosParamCreator = function (configuration?: Configur
         /**
          * 
          * @summary 내 신청 단건 조회 (대기 순번 포함)
-         * @param {number} xEmployeeId 
          * @param {number} enrollmentId 
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        getEnrollment: async (xEmployeeId: number, enrollmentId: number, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
-            // verify required parameter 'xEmployeeId' is not null or undefined
-            assertParamExists('getEnrollment', 'xEmployeeId', xEmployeeId)
+        getEnrollment: async (enrollmentId: number, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
             // verify required parameter 'enrollmentId' is not null or undefined
             assertParamExists('getEnrollment', 'enrollmentId', enrollmentId)
             const localVarPath = `/api/v1/enrollments/{enrollmentId}`
@@ -1283,9 +1554,9 @@ export const EnrollmentApiAxiosParamCreator = function (configuration?: Configur
             const localVarHeaderParameter = {} as any;
             const localVarQueryParameter = {} as any;
 
-            if (xEmployeeId !== undefined && xEmployeeId !== null) {
-                localVarHeaderParameter['X-Employee-Id'] = String(JSON.stringify(xEmployeeId));
-            }
+            // authentication bearerAuth required
+            // http bearer authentication required
+            await setBearerAuthToObject(localVarHeaderParameter, configuration)
 
 
     
@@ -1311,37 +1582,34 @@ export const EnrollmentApiFp = function(configuration?: Configuration) {
         /**
          * 
          * @summary 수강 신청 (정원이 차면 대기)
-         * @param {number} xEmployeeId 
          * @param {EnrollmentRequest} enrollmentRequest 
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async applyEnrollment(xEmployeeId: number, enrollmentRequest: EnrollmentRequest, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<EnrollmentResponse>> {
-            const localVarAxiosArgs = await localVarAxiosParamCreator.applyEnrollment(xEmployeeId, enrollmentRequest, options);
+        async applyEnrollment(enrollmentRequest: EnrollmentRequest, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<EnrollmentResponse>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.applyEnrollment(enrollmentRequest, options);
             return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
         },
         /**
          * 
          * @summary 내 신청 취소 (확정 취소 시 대기 1순위 자동 확정)
-         * @param {number} xEmployeeId 
          * @param {number} enrollmentId 
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async cancelEnrollment(xEmployeeId: number, enrollmentId: number, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<EnrollmentResponse>> {
-            const localVarAxiosArgs = await localVarAxiosParamCreator.cancelEnrollment(xEmployeeId, enrollmentId, options);
+        async cancelEnrollment(enrollmentId: number, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<EnrollmentResponse>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.cancelEnrollment(enrollmentId, options);
             return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
         },
         /**
          * 
          * @summary 내 신청 단건 조회 (대기 순번 포함)
-         * @param {number} xEmployeeId 
          * @param {number} enrollmentId 
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async getEnrollment(xEmployeeId: number, enrollmentId: number, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<EnrollmentResponse>> {
-            const localVarAxiosArgs = await localVarAxiosParamCreator.getEnrollment(xEmployeeId, enrollmentId, options);
+        async getEnrollment(enrollmentId: number, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<EnrollmentResponse>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.getEnrollment(enrollmentId, options);
             return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
         },
     }
@@ -1357,35 +1625,32 @@ export const EnrollmentApiFactory = function (configuration?: Configuration, bas
         /**
          * 
          * @summary 수강 신청 (정원이 차면 대기)
-         * @param {number} xEmployeeId 
          * @param {EnrollmentRequest} enrollmentRequest 
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        applyEnrollment(xEmployeeId: number, enrollmentRequest: EnrollmentRequest, options?: any): AxiosPromise<EnrollmentResponse> {
-            return localVarFp.applyEnrollment(xEmployeeId, enrollmentRequest, options).then((request) => request(axios, basePath));
+        applyEnrollment(enrollmentRequest: EnrollmentRequest, options?: any): AxiosPromise<EnrollmentResponse> {
+            return localVarFp.applyEnrollment(enrollmentRequest, options).then((request) => request(axios, basePath));
         },
         /**
          * 
          * @summary 내 신청 취소 (확정 취소 시 대기 1순위 자동 확정)
-         * @param {number} xEmployeeId 
          * @param {number} enrollmentId 
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        cancelEnrollment(xEmployeeId: number, enrollmentId: number, options?: any): AxiosPromise<EnrollmentResponse> {
-            return localVarFp.cancelEnrollment(xEmployeeId, enrollmentId, options).then((request) => request(axios, basePath));
+        cancelEnrollment(enrollmentId: number, options?: any): AxiosPromise<EnrollmentResponse> {
+            return localVarFp.cancelEnrollment(enrollmentId, options).then((request) => request(axios, basePath));
         },
         /**
          * 
          * @summary 내 신청 단건 조회 (대기 순번 포함)
-         * @param {number} xEmployeeId 
          * @param {number} enrollmentId 
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        getEnrollment(xEmployeeId: number, enrollmentId: number, options?: any): AxiosPromise<EnrollmentResponse> {
-            return localVarFp.getEnrollment(xEmployeeId, enrollmentId, options).then((request) => request(axios, basePath));
+        getEnrollment(enrollmentId: number, options?: any): AxiosPromise<EnrollmentResponse> {
+            return localVarFp.getEnrollment(enrollmentId, options).then((request) => request(axios, basePath));
         },
     };
 };
@@ -1400,40 +1665,37 @@ export class EnrollmentApi extends BaseAPI {
     /**
      * 
      * @summary 수강 신청 (정원이 차면 대기)
-     * @param {number} xEmployeeId 
      * @param {EnrollmentRequest} enrollmentRequest 
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      * @memberof EnrollmentApi
      */
-    public applyEnrollment(xEmployeeId: number, enrollmentRequest: EnrollmentRequest, options?: AxiosRequestConfig) {
-        return EnrollmentApiFp(this.configuration).applyEnrollment(xEmployeeId, enrollmentRequest, options).then((request) => request(this.axios, this.basePath));
+    public applyEnrollment(enrollmentRequest: EnrollmentRequest, options?: AxiosRequestConfig) {
+        return EnrollmentApiFp(this.configuration).applyEnrollment(enrollmentRequest, options).then((request) => request(this.axios, this.basePath));
     }
 
     /**
      * 
      * @summary 내 신청 취소 (확정 취소 시 대기 1순위 자동 확정)
-     * @param {number} xEmployeeId 
      * @param {number} enrollmentId 
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      * @memberof EnrollmentApi
      */
-    public cancelEnrollment(xEmployeeId: number, enrollmentId: number, options?: AxiosRequestConfig) {
-        return EnrollmentApiFp(this.configuration).cancelEnrollment(xEmployeeId, enrollmentId, options).then((request) => request(this.axios, this.basePath));
+    public cancelEnrollment(enrollmentId: number, options?: AxiosRequestConfig) {
+        return EnrollmentApiFp(this.configuration).cancelEnrollment(enrollmentId, options).then((request) => request(this.axios, this.basePath));
     }
 
     /**
      * 
      * @summary 내 신청 단건 조회 (대기 순번 포함)
-     * @param {number} xEmployeeId 
      * @param {number} enrollmentId 
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      * @memberof EnrollmentApi
      */
-    public getEnrollment(xEmployeeId: number, enrollmentId: number, options?: AxiosRequestConfig) {
-        return EnrollmentApiFp(this.configuration).getEnrollment(xEmployeeId, enrollmentId, options).then((request) => request(this.axios, this.basePath));
+    public getEnrollment(enrollmentId: number, options?: AxiosRequestConfig) {
+        return EnrollmentApiFp(this.configuration).getEnrollment(enrollmentId, options).then((request) => request(this.axios, this.basePath));
     }
 }
 

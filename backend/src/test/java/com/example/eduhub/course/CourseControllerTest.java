@@ -8,9 +8,12 @@ import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.example.eduhub.auth.SecurityConfig;
+import com.example.eduhub.auth.SecurityErrorHandlers;
 import com.example.eduhub.common.web.PageResponse;
 import java.time.LocalDateTime;
 import java.util.Collections;
@@ -19,18 +22,36 @@ import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.context.annotation.Import;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.http.MediaType;
+import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
 @WebMvcTest(CourseController.class)
+@Import({SecurityConfig.class, SecurityErrorHandlers.class})
 @ActiveProfiles("test")
 class CourseControllerTest {
 
   @Autowired private MockMvc mockMvc;
 
+  @MockBean private JwtDecoder jwtDecoder;
+
   @MockBean private CourseQueryService courseQueryService;
+
+  @Test
+  void courseWriteMethodsAreNotPublic() throws Exception {
+    mockMvc
+        .perform(
+            post("/api/v1/courses")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"title\":\"t\",\"category\":\"c\"}"))
+        .andExpect(status().isUnauthorized())
+        .andExpect(jsonPath("$.code").value("UNAUTHENTICATED"));
+    verifyNoInteractions(courseQueryService);
+  }
 
   @Test
   void listReturnsPageResponse() throws Exception {
@@ -140,5 +161,22 @@ class CourseControllerTest {
         .andExpect(status().isBadRequest())
         .andExpect(jsonPath("$.code").value("INVALID_REQUEST"));
     verifyNoInteractions(courseQueryService);
+  }
+
+  @Test
+  void nestedCoursePathIsNotPublic() throws Exception {
+    mockMvc
+        .perform(get("/api/v1/courses/1/anything"))
+        .andExpect(status().isUnauthorized())
+        .andExpect(jsonPath("$.code").value("UNAUTHENTICATED"));
+    verifyNoInteractions(courseQueryService);
+  }
+
+  @Test
+  void courseListIsPublic() throws Exception {
+    given(courseQueryService.search(any(), any(), any(Pageable.class)))
+        .willReturn(new PageResponse<>(Collections.emptyList(), 0, 20, 0L));
+
+    mockMvc.perform(get("/api/v1/courses")).andExpect(status().isOk());
   }
 }

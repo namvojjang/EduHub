@@ -11,16 +11,31 @@
 ./gradlew spotlessApply                                     # 포맷 적용 (google-java-format 1.7)
 ```
 
-- 프로필: `dev`(기본, 로컬 PostgreSQL의 `POSTGRES_DB`), `test`(같은 서버의 `POSTGRES_TEST_DB`, 기본 `eduhub_test`). Docker·Testcontainers는 쓰지 않는다.
+- 프로필: 기본 프로필 없음. 로컬 `./gradlew bootRun`은 dev를 자동 지정. 운영·배포는 반드시 프로필을 지정한다(지정하지 않으면 기동 실패). IDE에서 `EduHubApplication`을 바로 실행할 때는 Active profiles에 `dev`를 넣는다(없으면 DataSource 오류). `dev`(로컬 PostgreSQL의 `POSTGRES_DB`), `test`(같은 서버의 `POSTGRES_TEST_DB`, 기본 `eduhub_test`). Docker·Testcontainers는 쓰지 않는다.
 - 접속 정보는 `POSTGRES_USER`·`POSTGRES_PASSWORD` 등. 루트 `.env`를 `spring.config.import`로 읽는다. 저장소 테스트(`@DataJpaTest`)는 로컬 DB가 떠 있어야 통과한다.
+- 로컬 실행(`bootRun`)에는 `.env`에 `EDUHUB_JWT_SECRET`(32바이트 이상)이 필요하다. 없으면 시작에 실패한다 (NFR-03).
 - Java 8이다. `var`, record, text block을 쓰지 않는다. Spring Boot 2.7이므로 `javax.*` 패키지를 쓴다(`jakarta.*` 아님).
 
 ## 패키지와 계층 규칙 (NFR-07)
 
-- 도메인 패키지: `com.example.eduhub.course`, `com.example.eduhub.enrollment`. 공통 코드는 `com.example.eduhub.common`.
+- 도메인 패키지: `com.example.eduhub.course`, `com.example.eduhub.enrollment`, `com.example.eduhub.auth`(인증·사원). 공통 코드는 `com.example.eduhub.common`.
 - `enrollment`는 `course`를 참조할 수 있다. `course`는 `enrollment`에 의존하지 않는다.
+- `enrollment`는 `auth`의 `CurrentUser`만 참조한다. `course`는 `auth`에 의존하지 않는다.
 - 계층: Controller → Service → Repository. Controller에서 Repository를 직접 호출하지 않는다.
 - 서비스 계층 테스트 커버리지 70% 이상 (NFR-05).
+
+## 인증 (NFR-03)
+
+- dev 프로필에서 사원이 없으면 `DevAccountLoader`가 개발 계정을 만든다. 비밀번호는 모두 `dev-password`(운영 비밀 아님, test·운영 프로필에서는 만들어지지 않음).
+
+| 사번 | 이름 | 역할 |
+|---|---|---|
+| E1001 | 김사원 | EMPLOYEE |
+| E1002 | 이사원 | EMPLOYEE |
+| A0001 | 박관리 | ADMIN |
+
+- 컨트롤러 테스트: 요청에 `.with(TestAuth.as(employeeId, "EMPLOYEE"))`로 로그인 사용자를 지정한다.
+- `@WebMvcTest`에는 `@Import({SecurityConfig.class, SecurityErrorHandlers.class})`와 `@MockBean JwtDecoder`를 붙인다. 빠지면 Boot 기본 보안이 적용된다.
 
 ## JPA 규칙
 

@@ -1,13 +1,19 @@
 package com.example.eduhub.enrollment;
 
+import static com.example.eduhub.TestAuth.as;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.example.eduhub.auth.SecurityConfig;
+import com.example.eduhub.auth.SecurityErrorHandlers;
 import com.example.eduhub.common.error.ConflictException;
 import com.example.eduhub.course.CourseSessionNotFoundException;
 import java.time.LocalDateTime;
@@ -15,17 +21,22 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
+import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
 @WebMvcTest(EnrollmentController.class)
+@Import({SecurityConfig.class, SecurityErrorHandlers.class})
 @ActiveProfiles("test")
 class EnrollmentControllerTest {
 
   private static final String BODY = "{\"sessionId\":10}";
 
   @Autowired private MockMvc mockMvc;
+
+  @MockBean private JwtDecoder jwtDecoder;
 
   @MockBean private EnrollmentService enrollmentService;
 
@@ -39,9 +50,9 @@ class EnrollmentControllerTest {
     mockMvc
         .perform(
             post("/api/v1/enrollments")
-                .header("X-Employee-Id", "1")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(BODY))
+                .content(BODY)
+                .with(as(1L, "EMPLOYEE")))
         .andExpect(status().isCreated())
         .andExpect(jsonPath("$.id").value(100))
         .andExpect(jsonPath("$.status").value("CONFIRMED"));
@@ -52,36 +63,12 @@ class EnrollmentControllerTest {
     mockMvc
         .perform(
             post("/api/v1/enrollments")
-                .header("X-Employee-Id", "1")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{}"))
+                .content("{}")
+                .with(as(1L, "EMPLOYEE")))
         .andExpect(status().isBadRequest())
         .andExpect(jsonPath("$.code").value("INVALID_REQUEST"))
         .andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.containsString("sessionId")));
-    verifyNoInteractions(enrollmentService);
-  }
-
-  @Test
-  void applyWithoutEmployeeHeaderIsBadRequest() throws Exception {
-    mockMvc
-        .perform(post("/api/v1/enrollments").contentType(MediaType.APPLICATION_JSON).content(BODY))
-        .andExpect(status().isBadRequest())
-        .andExpect(jsonPath("$.code").value("INVALID_REQUEST"))
-        .andExpect(
-            jsonPath("$.message").value(org.hamcrest.Matchers.containsString("X-Employee-Id")));
-    verifyNoInteractions(enrollmentService);
-  }
-
-  @Test
-  void applyWithNonNumericEmployeeHeaderIsBadRequest() throws Exception {
-    mockMvc
-        .perform(
-            post("/api/v1/enrollments")
-                .header("X-Employee-Id", "abc")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(BODY))
-        .andExpect(status().isBadRequest())
-        .andExpect(jsonPath("$.code").value("INVALID_REQUEST"));
     verifyNoInteractions(enrollmentService);
   }
 
@@ -93,9 +80,9 @@ class EnrollmentControllerTest {
     mockMvc
         .perform(
             post("/api/v1/enrollments")
-                .header("X-Employee-Id", "1")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(BODY))
+                .content(BODY)
+                .with(as(1L, "EMPLOYEE")))
         .andExpect(status().isNotFound())
         .andExpect(jsonPath("$.code").value("SESSION_NOT_FOUND"));
   }
@@ -108,9 +95,9 @@ class EnrollmentControllerTest {
     mockMvc
         .perform(
             post("/api/v1/enrollments")
-                .header("X-Employee-Id", "1")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(BODY))
+                .content(BODY)
+                .with(as(1L, "EMPLOYEE")))
         .andExpect(status().isConflict())
         .andExpect(jsonPath("$.code").value("SESSION_NOT_RECRUITING"));
   }
@@ -123,9 +110,9 @@ class EnrollmentControllerTest {
     mockMvc
         .perform(
             post("/api/v1/enrollments")
-                .header("X-Employee-Id", "1")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(BODY))
+                .content(BODY)
+                .with(as(1L, "EMPLOYEE")))
         .andExpect(status().isConflict())
         .andExpect(jsonPath("$.code").value("DUPLICATE_ENROLLMENT"));
   }
@@ -140,9 +127,9 @@ class EnrollmentControllerTest {
     mockMvc
         .perform(
             post("/api/v1/enrollments")
-                .header("X-Employee-Id", "1")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(BODY))
+                .content(BODY)
+                .with(as(1L, "EMPLOYEE")))
         .andExpect(status().isCreated())
         .andExpect(jsonPath("$.waitingNumber").value(3))
         .andExpect(jsonPath("$.promoted").value(false));
@@ -156,7 +143,7 @@ class EnrollmentControllerTest {
             new EnrollmentResponse(101L, 10L, EnrollmentStatus.WAITING, now, null, 2, false));
 
     mockMvc
-        .perform(get("/api/v1/enrollments/101").header("X-Employee-Id", "1"))
+        .perform(get("/api/v1/enrollments/101").with(as(1L, "EMPLOYEE")))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.id").value(101))
         .andExpect(jsonPath("$.status").value("WAITING"))
@@ -169,42 +156,15 @@ class EnrollmentControllerTest {
         .willThrow(new EnrollmentNotFoundException(101L));
 
     mockMvc
-        .perform(get("/api/v1/enrollments/101").header("X-Employee-Id", "1"))
+        .perform(get("/api/v1/enrollments/101").with(as(1L, "EMPLOYEE")))
         .andExpect(status().isNotFound())
         .andExpect(jsonPath("$.code").value("ENROLLMENT_NOT_FOUND"));
   }
 
   @Test
-  void getWithoutEmployeeHeaderIsBadRequest() throws Exception {
-    mockMvc
-        .perform(get("/api/v1/enrollments/101"))
-        .andExpect(status().isBadRequest())
-        .andExpect(jsonPath("$.code").value("INVALID_REQUEST"));
-    verifyNoInteractions(enrollmentService);
-  }
-
-  @Test
   void getWithNonNumericEnrollmentIdIsBadRequest() throws Exception {
     mockMvc
-        .perform(get("/api/v1/enrollments/abc").header("X-Employee-Id", "1"))
-        .andExpect(status().isBadRequest())
-        .andExpect(jsonPath("$.code").value("INVALID_REQUEST"));
-    verifyNoInteractions(enrollmentService);
-  }
-
-  @Test
-  void getWithNonNumericEmployeeHeaderIsBadRequest() throws Exception {
-    mockMvc
-        .perform(get("/api/v1/enrollments/101").header("X-Employee-Id", "abc"))
-        .andExpect(status().isBadRequest())
-        .andExpect(jsonPath("$.code").value("INVALID_REQUEST"));
-    verifyNoInteractions(enrollmentService);
-  }
-
-  @Test
-  void cancelWithNonNumericEmployeeHeaderIsBadRequest() throws Exception {
-    mockMvc
-        .perform(post("/api/v1/enrollments/100/cancel").header("X-Employee-Id", "abc"))
+        .perform(get("/api/v1/enrollments/abc").with(as(1L, "EMPLOYEE")))
         .andExpect(status().isBadRequest())
         .andExpect(jsonPath("$.code").value("INVALID_REQUEST"));
     verifyNoInteractions(enrollmentService);
@@ -218,7 +178,7 @@ class EnrollmentControllerTest {
             new EnrollmentResponse(100L, 10L, EnrollmentStatus.CANCELLED, now, now, null, false));
 
     mockMvc
-        .perform(post("/api/v1/enrollments/100/cancel").header("X-Employee-Id", "1"))
+        .perform(post("/api/v1/enrollments/100/cancel").with(as(1L, "EMPLOYEE")))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.id").value(100))
         .andExpect(jsonPath("$.status").value("CANCELLED"));
@@ -230,7 +190,7 @@ class EnrollmentControllerTest {
         .willThrow(new EnrollmentNotFoundException(100L));
 
     mockMvc
-        .perform(post("/api/v1/enrollments/100/cancel").header("X-Employee-Id", "1"))
+        .perform(post("/api/v1/enrollments/100/cancel").with(as(1L, "EMPLOYEE")))
         .andExpect(status().isNotFound())
         .andExpect(jsonPath("$.code").value("ENROLLMENT_NOT_FOUND"));
   }
@@ -242,7 +202,7 @@ class EnrollmentControllerTest {
             new ConflictException("ENROLLMENT_NOT_CANCELLABLE", "취소할 수 없는 신청입니다: CANCELLED"));
 
     mockMvc
-        .perform(post("/api/v1/enrollments/100/cancel").header("X-Employee-Id", "1"))
+        .perform(post("/api/v1/enrollments/100/cancel").with(as(1L, "EMPLOYEE")))
         .andExpect(status().isConflict())
         .andExpect(jsonPath("$.code").value("ENROLLMENT_NOT_CANCELLABLE"));
   }
@@ -253,26 +213,80 @@ class EnrollmentControllerTest {
         .willThrow(new ConflictException("SESSION_ALREADY_STARTED", "이미 시작된 회차입니다."));
 
     mockMvc
-        .perform(post("/api/v1/enrollments/100/cancel").header("X-Employee-Id", "1"))
+        .perform(post("/api/v1/enrollments/100/cancel").with(as(1L, "EMPLOYEE")))
         .andExpect(status().isConflict())
         .andExpect(jsonPath("$.code").value("SESSION_ALREADY_STARTED"));
   }
 
   @Test
-  void cancelWithoutEmployeeHeaderIsBadRequest() throws Exception {
+  void cancelWithNonNumericEnrollmentIdIsBadRequest() throws Exception {
     mockMvc
-        .perform(post("/api/v1/enrollments/100/cancel"))
+        .perform(post("/api/v1/enrollments/abc/cancel").with(as(1L, "EMPLOYEE")))
         .andExpect(status().isBadRequest())
         .andExpect(jsonPath("$.code").value("INVALID_REQUEST"));
     verifyNoInteractions(enrollmentService);
   }
 
   @Test
-  void cancelWithNonNumericEnrollmentIdIsBadRequest() throws Exception {
+  void applyWithoutTokenIsUnauthorized() throws Exception {
     mockMvc
-        .perform(post("/api/v1/enrollments/abc/cancel").header("X-Employee-Id", "1"))
-        .andExpect(status().isBadRequest())
-        .andExpect(jsonPath("$.code").value("INVALID_REQUEST"));
+        .perform(post("/api/v1/enrollments").contentType(MediaType.APPLICATION_JSON).content(BODY))
+        .andExpect(status().isUnauthorized())
+        .andExpect(jsonPath("$.code").value("UNAUTHENTICATED"));
     verifyNoInteractions(enrollmentService);
+  }
+
+  @Test
+  void getWithoutTokenIsUnauthorized() throws Exception {
+    mockMvc
+        .perform(get("/api/v1/enrollments/101"))
+        .andExpect(status().isUnauthorized())
+        .andExpect(jsonPath("$.code").value("UNAUTHENTICATED"));
+    verifyNoInteractions(enrollmentService);
+  }
+
+  @Test
+  void cancelWithoutTokenIsUnauthorized() throws Exception {
+    mockMvc
+        .perform(post("/api/v1/enrollments/100/cancel"))
+        .andExpect(status().isUnauthorized())
+        .andExpect(jsonPath("$.code").value("UNAUTHENTICATED"));
+    verifyNoInteractions(enrollmentService);
+  }
+
+  @Test
+  void applyUsesEmployeeIdFromToken() throws Exception {
+    LocalDateTime now = LocalDateTime.of(2030, 1, 1, 9, 0);
+    given(enrollmentService.apply(42L, 10L))
+        .willReturn(
+            new EnrollmentResponse(100L, 10L, EnrollmentStatus.CONFIRMED, now, now, null, false));
+
+    mockMvc
+        .perform(
+            post("/api/v1/enrollments")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(BODY)
+                .with(as(42L, "EMPLOYEE")))
+        .andExpect(status().isCreated());
+    verify(enrollmentService).apply(42L, 10L);
+  }
+
+  @Test
+  void headerEmployeeIdIsIgnored() throws Exception {
+    LocalDateTime now = LocalDateTime.of(2030, 1, 1, 9, 0);
+    given(enrollmentService.apply(42L, 10L))
+        .willReturn(
+            new EnrollmentResponse(100L, 10L, EnrollmentStatus.CONFIRMED, now, now, null, false));
+
+    mockMvc
+        .perform(
+            post("/api/v1/enrollments")
+                .header("X-Employee-Id", "7")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(BODY)
+                .with(as(42L, "EMPLOYEE")))
+        .andExpect(status().isCreated());
+    verify(enrollmentService).apply(42L, 10L);
+    verify(enrollmentService, never()).apply(eq(7L), anyLong());
   }
 }
