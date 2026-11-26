@@ -337,6 +337,90 @@ export interface MeResponse {
 /**
  * 
  * @export
+ * @interface MyEnrollmentResponse
+ */
+export interface MyEnrollmentResponse {
+    /**
+     * 
+     * @type {number}
+     * @memberof MyEnrollmentResponse
+     */
+    'enrollmentId'?: number;
+    /**
+     * 
+     * @type {number}
+     * @memberof MyEnrollmentResponse
+     */
+    'sessionId'?: number;
+    /**
+     * 
+     * @type {number}
+     * @memberof MyEnrollmentResponse
+     */
+    'courseId'?: number;
+    /**
+     * 
+     * @type {string}
+     * @memberof MyEnrollmentResponse
+     */
+    'courseTitle'?: string;
+    /**
+     * 
+     * @type {string}
+     * @memberof MyEnrollmentResponse
+     */
+    'sessionStartAt'?: string;
+    /**
+     * 
+     * @type {string}
+     * @memberof MyEnrollmentResponse
+     */
+    'place'?: string;
+    /**
+     * 
+     * @type {string}
+     * @memberof MyEnrollmentResponse
+     */
+    'status'?: MyEnrollmentResponseStatusEnum;
+    /**
+     * 
+     * @type {number}
+     * @memberof MyEnrollmentResponse
+     */
+    'waitingNumber'?: number;
+    /**
+     * 
+     * @type {string}
+     * @memberof MyEnrollmentResponse
+     */
+    'appliedAt'?: string;
+    /**
+     * 
+     * @type {string}
+     * @memberof MyEnrollmentResponse
+     */
+    'confirmedAt'?: string;
+    /**
+     * 
+     * @type {boolean}
+     * @memberof MyEnrollmentResponse
+     */
+    'promoted'?: boolean;
+}
+
+export const MyEnrollmentResponseStatusEnum = {
+    Confirmed: 'CONFIRMED',
+    Waiting: 'WAITING',
+    Cancelled: 'CANCELLED',
+    Completed: 'COMPLETED',
+    NotCompleted: 'NOT_COMPLETED'
+} as const;
+
+export type MyEnrollmentResponseStatusEnum = typeof MyEnrollmentResponseStatusEnum[keyof typeof MyEnrollmentResponseStatusEnum];
+
+/**
+ * 
+ * @export
  * @interface PageResponseAdminCourseSummaryResponse
  */
 export interface PageResponseAdminCourseSummaryResponse {
@@ -1569,6 +1653,45 @@ export const EnrollmentApiAxiosParamCreator = function (configuration?: Configur
                 options: localVarRequestOptions,
             };
         },
+        /**
+         * 
+         * @summary 내 신청 내역 (최근 신청순, 상태 필터 선택)
+         * @param {'CONFIRMED' | 'WAITING' | 'CANCELLED' | 'COMPLETED' | 'NOT_COMPLETED'} [status] 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        listMyEnrollments: async (status?: 'CONFIRMED' | 'WAITING' | 'CANCELLED' | 'COMPLETED' | 'NOT_COMPLETED', options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+            const localVarPath = `/api/v1/me/enrollments`;
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'GET', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+            // authentication bearerAuth required
+            // http bearer authentication required
+            await setBearerAuthToObject(localVarHeaderParameter, configuration)
+
+            if (status !== undefined) {
+                localVarQueryParameter['status'] = status;
+            }
+
+
+    
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
     }
 };
 
@@ -1612,6 +1735,17 @@ export const EnrollmentApiFp = function(configuration?: Configuration) {
             const localVarAxiosArgs = await localVarAxiosParamCreator.getEnrollment(enrollmentId, options);
             return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
         },
+        /**
+         * 
+         * @summary 내 신청 내역 (최근 신청순, 상태 필터 선택)
+         * @param {'CONFIRMED' | 'WAITING' | 'CANCELLED' | 'COMPLETED' | 'NOT_COMPLETED'} [status] 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async listMyEnrollments(status?: 'CONFIRMED' | 'WAITING' | 'CANCELLED' | 'COMPLETED' | 'NOT_COMPLETED', options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<Array<MyEnrollmentResponse>>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.listMyEnrollments(status, options);
+            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+        },
     }
 };
 
@@ -1651,6 +1785,16 @@ export const EnrollmentApiFactory = function (configuration?: Configuration, bas
          */
         getEnrollment(enrollmentId: number, options?: any): AxiosPromise<EnrollmentResponse> {
             return localVarFp.getEnrollment(enrollmentId, options).then((request) => request(axios, basePath));
+        },
+        /**
+         * 
+         * @summary 내 신청 내역 (최근 신청순, 상태 필터 선택)
+         * @param {'CONFIRMED' | 'WAITING' | 'CANCELLED' | 'COMPLETED' | 'NOT_COMPLETED'} [status] 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        listMyEnrollments(status?: 'CONFIRMED' | 'WAITING' | 'CANCELLED' | 'COMPLETED' | 'NOT_COMPLETED', options?: any): AxiosPromise<Array<MyEnrollmentResponse>> {
+            return localVarFp.listMyEnrollments(status, options).then((request) => request(axios, basePath));
         },
     };
 };
@@ -1696,6 +1840,18 @@ export class EnrollmentApi extends BaseAPI {
      */
     public getEnrollment(enrollmentId: number, options?: AxiosRequestConfig) {
         return EnrollmentApiFp(this.configuration).getEnrollment(enrollmentId, options).then((request) => request(this.axios, this.basePath));
+    }
+
+    /**
+     * 
+     * @summary 내 신청 내역 (최근 신청순, 상태 필터 선택)
+     * @param {'CONFIRMED' | 'WAITING' | 'CANCELLED' | 'COMPLETED' | 'NOT_COMPLETED'} [status] 
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof EnrollmentApi
+     */
+    public listMyEnrollments(status?: 'CONFIRMED' | 'WAITING' | 'CANCELLED' | 'COMPLETED' | 'NOT_COMPLETED', options?: AxiosRequestConfig) {
+        return EnrollmentApiFp(this.configuration).listMyEnrollments(status, options).then((request) => request(this.axios, this.basePath));
     }
 }
 

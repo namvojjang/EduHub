@@ -2,6 +2,7 @@ package com.example.eduhub.enrollment;
 
 import java.time.LocalDateTime;
 import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -35,4 +36,18 @@ public interface EnrollmentRepository extends JpaRepository<Enrollment, Long> {
 
   boolean existsByCourseIdAndEmployeeIdAndStatusIn(
       Long courseId, Long employeeId, Collection<EnrollmentStatus> statuses);
+
+  /** FR-07. 과정·회차·대기 순번을 SQL 한 번으로(NFR-02). 순번 기준은 countAhead와 같은 (appliedAt, id)(D-04). */
+  @Query(
+      "select new com.example.eduhub.enrollment.MyEnrollmentResponse("
+          + " e.id, s.id, c.id, c.title, s.startAt, s.place, e.status,"
+          + " (select count(w) from Enrollment w"
+          + "   where w.session = s and w.status = com.example.eduhub.enrollment.EnrollmentStatus.WAITING"
+          + "     and (w.appliedAt < e.appliedAt or (w.appliedAt = e.appliedAt and w.id <= e.id))),"
+          + " e.appliedAt, e.confirmedAt, e.promoted)"
+          + " from Enrollment e join e.session s join s.course c"
+          + " where e.employeeId = :employeeId and (:status is null or e.status = :status)"
+          + " order by e.appliedAt desc, e.id desc")
+  List<MyEnrollmentResponse> findMyEnrollments(
+      @Param("employeeId") Long employeeId, @Param("status") EnrollmentStatus status);
 }
