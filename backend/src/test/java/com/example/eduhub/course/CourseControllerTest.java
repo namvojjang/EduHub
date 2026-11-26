@@ -8,6 +8,7 @@ import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -24,6 +25,7 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Import;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.http.MediaType;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
@@ -38,6 +40,18 @@ class CourseControllerTest {
   @MockBean private JwtDecoder jwtDecoder;
 
   @MockBean private CourseQueryService courseQueryService;
+
+  @Test
+  void courseWriteMethodsAreNotPublic() throws Exception {
+    mockMvc
+        .perform(
+            post("/api/v1/courses")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"title\":\"t\",\"category\":\"c\"}"))
+        .andExpect(status().isUnauthorized())
+        .andExpect(jsonPath("$.code").value("UNAUTHENTICATED"));
+    verifyNoInteractions(courseQueryService);
+  }
 
   @Test
   void listReturnsPageResponse() throws Exception {

@@ -188,6 +188,7 @@ class CourseAdminControllerTest {
     String course = "{\"title\":\"t\",\"category\":\"c\"}";
     String session = "{\"startAt\":\"2030-01-06T09:00:00\",\"place\":\"본사\",\"capacity\":10}";
     MockHttpServletRequestBuilder[] requests = {
+      get("/api/v1/admin/courses"),
       post("/api/v1/admin/courses").content(course),
       put("/api/v1/admin/courses/1").content(course),
       post("/api/v1/admin/courses/1/close"),

@@ -2,11 +2,14 @@ package com.example.eduhub.auth;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.convert.converter.Converter;
 import org.springframework.http.HttpMethod;
+import org.springframework.security.authentication.AbstractAuthenticationToken;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
 import org.springframework.security.oauth2.server.resource.authentication.JwtGrantedAuthoritiesConverter;
 import org.springframework.security.web.SecurityFilterChain;
@@ -58,14 +61,20 @@ public class SecurityConfig {
     return http.build();
   }
 
-  /** 토큰의 role 클레임(EMPLOYEE/ADMIN)을 ROLE_ 접두어 권한으로 바꾼다. */
-  private JwtAuthenticationConverter roleConverter() {
+  /**
+   * 토큰의 role 클레임(EMPLOYEE/ADMIN)을 ROLE_ 접두어 권한으로 바꾼다. sub가 사원 id(숫자)가 아니면 여기서 인증을
+   * 거부해(AuthenticationException) 기존 진입점이 401 JSON을 내게 한다.
+   */
+  private Converter<Jwt, AbstractAuthenticationToken> roleConverter() {
     JwtGrantedAuthoritiesConverter authorities = new JwtGrantedAuthoritiesConverter();
     authorities.setAuthoritiesClaimName("role");
     authorities.setAuthorityPrefix("ROLE_");
     JwtAuthenticationConverter converter = new JwtAuthenticationConverter();
     converter.setJwtGrantedAuthoritiesConverter(authorities);
-    return converter;
+    return jwt -> {
+      CurrentUser.from(jwt); // sub 검증용. 숫자가 아니면 InvalidBearerTokenException
+      return converter.convert(jwt);
+    };
   }
 
   @Bean

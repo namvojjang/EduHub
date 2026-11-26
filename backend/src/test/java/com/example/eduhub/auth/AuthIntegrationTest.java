@@ -20,7 +20,11 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
+import org.springframework.security.oauth2.jwt.JwsHeader;
+import org.springframework.security.oauth2.jwt.JwtClaimsSet;
 import org.springframework.security.oauth2.jwt.JwtEncoder;
+import org.springframework.security.oauth2.jwt.JwtEncoderParameters;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
@@ -109,6 +113,22 @@ class AuthIntegrationTest {
     String expired = new TokenService(jwtEncoder, 60, twoHoursAgo).issue(employee);
 
     expectUnauthenticated(expired);
+  }
+
+  @Test
+  void tokenWithNonNumericSubjectIsUnauthorized() throws Exception {
+    Instant now = Instant.now();
+    JwtClaimsSet claims =
+        JwtClaimsSet.builder()
+            .subject("abc")
+            .issuedAt(now)
+            .expiresAt(now.plusSeconds(600))
+            .claim("role", "EMPLOYEE")
+            .build();
+    JwsHeader jwsHeader = JwsHeader.with(MacAlgorithm.HS256).build();
+    String token = jwtEncoder.encode(JwtEncoderParameters.from(jwsHeader, claims)).getTokenValue();
+
+    expectUnauthenticated(token);
   }
 
   @Test
