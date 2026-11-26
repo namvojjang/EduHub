@@ -75,6 +75,15 @@ describe('AdminCoursePage', () => {
     vi.mocked(useCourseDetail).mockReturnValue(detail('OPEN'));
   });
 
+  it('다시 불러오는 중이어도 data가 있으면 Skeleton 없이 내용만 보여 준다', () => {
+    vi.mocked(useCourseDetail).mockReturnValue({ ...detail('OPEN'), loading: true });
+
+    renderPage();
+
+    expect(screen.queryByRole('status', { name: '불러오는 중' })).not.toBeInTheDocument();
+    expect(screen.getByRole('table', { name: '회차 관리 목록' })).toBeInTheDocument();
+  });
+
   it('회차를 보여 주고, 모집 중인 회차만 메뉴로 수정·마감할 수 있다', async () => {
     renderPage();
 
@@ -95,7 +104,9 @@ describe('AdminCoursePage', () => {
 
     fireEvent.click(screen.getByRole('button', { name: '회차 추가' }));
     const dialog = await screen.findByRole('dialog');
-    fireEvent.change(within(dialog).getByLabelText(/시작 일시/), { target: { value: '2030-03-02T13:30' } });
+    fireEvent.change(within(dialog).getByLabelText(/시작 일시/), {
+      target: { value: '2030-03-02T13:30' },
+    });
     fireEvent.change(within(dialog).getByLabelText(/장소/), { target: { value: '본사 5층' } });
     fireEvent.change(within(dialog).getByLabelText(/정원/), { target: { value: '15' } });
     fireEvent.click(within(dialog).getByRole('button', { name: '저장' }));
@@ -110,17 +121,23 @@ describe('AdminCoursePage', () => {
   });
 
   it('저장이 실패하면 대화상자에 백엔드 메시지를 보여 준다', async () => {
-    actions.createSession.mockRejectedValue(new Error('종료된 과정에는 회차를 추가할 수 없습니다.'));
+    actions.createSession.mockRejectedValue(
+      new Error('종료된 과정에는 회차를 추가할 수 없습니다.'),
+    );
     renderPage();
 
     fireEvent.click(screen.getByRole('button', { name: '회차 추가' }));
     const dialog = await screen.findByRole('dialog');
-    fireEvent.change(within(dialog).getByLabelText(/시작 일시/), { target: { value: '2030-03-02T13:30' } });
+    fireEvent.change(within(dialog).getByLabelText(/시작 일시/), {
+      target: { value: '2030-03-02T13:30' },
+    });
     fireEvent.change(within(dialog).getByLabelText(/장소/), { target: { value: '본사' } });
     fireEvent.change(within(dialog).getByLabelText(/정원/), { target: { value: '15' } });
     fireEvent.click(within(dialog).getByRole('button', { name: '저장' }));
 
-    expect(await within(dialog).findByText('종료된 과정에는 회차를 추가할 수 없습니다.')).toBeInTheDocument();
+    expect(
+      await within(dialog).findByText('종료된 과정에는 회차를 추가할 수 없습니다.'),
+    ).toBeInTheDocument();
   });
 
   it('모집 마감을 확인하면 closeSession을 부른다', async () => {
@@ -141,7 +158,9 @@ describe('AdminCoursePage', () => {
     fireEvent.click(await openMenuItem('모집 마감'));
     fireEvent.click(await screen.findByRole('button', { name: '취소' }));
 
-    await waitFor(() => expect(screen.queryByRole('button', { name: '취소' })).not.toBeInTheDocument());
+    await waitFor(() =>
+      expect(screen.queryByRole('button', { name: '취소' })).not.toBeInTheDocument(),
+    );
     expect(actions.closeSession).not.toHaveBeenCalled();
   });
 

@@ -18,21 +18,21 @@ function renderCard(capacity?: number, remainingSeats?: number, status: Status =
 }
 
 describe('SessionCard', () => {
-  it('일정·장소·상태·남은 자리를 보여 주고 신청하기는 비활성이다', () => {
+  it('일정·장소·상태·남은 자리를 보여 주고 action이 없으면 버튼도 없다', () => {
     renderCard(20, 10);
 
     expect(screen.getByText('2026-12-01 09:00')).toBeInTheDocument();
     expect(screen.getByText('본사 3층')).toBeInTheDocument();
     expect(screen.getByText('모집 중')).toBeInTheDocument();
     expect(screen.getByText(/^남은 자리/)).toHaveTextContent('남은 자리 10 / 20');
-    expect(screen.getByRole('button', { name: '신청하기' })).toBeDisabled();
+    expect(screen.queryByRole('button')).not.toBeInTheDocument();
+    expect(screen.queryByText('수강 신청 화면 준비 중')).not.toBeInTheDocument();
   });
 
-  it('신청하기 버튼은 항상 보이는 안내 문구와 aria-describedby로 연결된다', () => {
-    renderCard(20, 10);
+  it('action으로 받은 내용을 그 자리에 그린다', () => {
+    renderWithProviders(<SessionCard action={<button type="button">신청하기</button>} />);
 
-    const notice = screen.getByText('수강 신청 화면 준비 중');
-    expect(screen.getByRole('button', { name: '신청하기' })).toHaveAttribute('aria-describedby', notice.id);
+    expect(screen.getByRole('button', { name: '신청하기' })).toBeInTheDocument();
   });
 
   it('정원·남은 자리가 없어도 깨지지 않는다', () => {
