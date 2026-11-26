@@ -41,6 +41,20 @@ public interface EnrollmentRepository extends JpaRepository<Enrollment, Long> {
   boolean existsByCourseIdAndEmployeeIdAndStatus(
       Long courseId, Long employeeId, EnrollmentStatus status);
 
+  /**
+   * FR-08 명단. 사번·이름은 auth.Employee를 연관관계 없이 left join(엔티티 조인)한다. 사원 행이 없는 신청도 빠지지 않는다. 엔티티를 올리지 않고
+   * 값만 읽는다. 정렬은 대기 순번 기준과 같은 (appliedAt, id).
+   */
+  @Query(
+      "select new com.example.eduhub.enrollment.RosterEntry("
+          + " e.id, e.employeeId, m.employeeNo, m.name, e.status, e.appliedAt, e.confirmedAt,"
+          + " e.promoted)"
+          + " from Enrollment e left join Employee m on m.id = e.employeeId"
+          + " where e.session.id = :sessionId and e.status in :statuses"
+          + " order by e.appliedAt, e.id")
+  List<RosterEntry> findRoster(
+      @Param("sessionId") Long sessionId, @Param("statuses") Collection<EnrollmentStatus> statuses);
+
   /** FR-07. 과정·회차·대기 순번을 SQL 한 번으로(NFR-02). 순번 기준은 countAhead와 같은 (appliedAt, id)(D-04). */
   @Query(
       "select new com.example.eduhub.enrollment.MyEnrollmentResponse("
