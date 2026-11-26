@@ -191,6 +191,47 @@ class MyEnrollmentsTest {
   }
 
   @Test
+  void waitingCancelPullsUpLaterWaitingNumber() throws Exception {
+    mockMvc
+        .perform(get("/api/v1/me/enrollments").with(as(park, "EMPLOYEE")))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$[1].enrollmentId").value(parkA.getId()))
+        .andExpect(jsonPath("$[1].waitingNumber").value(2));
+
+    enrollmentService.cancel(lee, leeA.getId());
+
+    mockMvc
+        .perform(get("/api/v1/me/enrollments").with(as(park, "EMPLOYEE")))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$", hasSize(2)))
+        .andExpect(jsonPath("$[1].enrollmentId").value(parkA.getId()))
+        .andExpect(jsonPath("$[1].status").value("WAITING"))
+        .andExpect(jsonPath("$[1].waitingNumber").value(1));
+  }
+
+  @Test
+  void cancelledEnrollmentIsListed() throws Exception {
+    enrollmentService.cancel(kim, kimA.getId());
+
+    mockMvc
+        .perform(get("/api/v1/me/enrollments").with(as(kim, "EMPLOYEE")))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$", hasSize(1)))
+        .andExpect(jsonPath("$[0].enrollmentId").value(kimA.getId()))
+        .andExpect(jsonPath("$[0].status").value("CANCELLED"))
+        .andExpect(jsonPath("$[0].waitingNumber").value(nullValue()))
+        .andExpect(jsonPath("$[0].confirmedAt").value(notNullValue()))
+        .andExpect(jsonPath("$[0].promoted").value(false));
+
+    mockMvc
+        .perform(
+            get("/api/v1/me/enrollments").param("status", "CANCELLED").with(as(kim, "EMPLOYEE")))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$", hasSize(1)))
+        .andExpect(jsonPath("$[0].status").value("CANCELLED"));
+  }
+
+  @Test
   void s10_waitingNumberMatchesSingleLookup() throws Exception {
     MvcResult single =
         mockMvc

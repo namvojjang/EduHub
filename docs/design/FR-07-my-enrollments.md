@@ -69,8 +69,8 @@ List<MyEnrollmentResponse> findMyEnrollments(@Param("employeeId") Long employeeI
 ```
 
 - 순번: 같은 회차 대기 중 `(appliedAt, id)`가 나보다 앞서거나 나 자신인 수 = 순번. 기존 `countAhead + 1`과 같은 결과다. 대기가 아니면 DTO 생성자에서 null로 바꾼다.
-- `MyEnrollmentResponse`는 Lombok `@Value`(Java 8이라 record 금지)에 JPQL용 생성자(순번이 `Long`으로 들어옴)를 하나 더 둔다.
-- **Hibernate 5.6 위험**: select 절의 상관 서브쿼리와 `:status is null` 조건은 Hibernate 6(교재)에서는 검증됐지만 이 프로젝트에서는 아직 확인하지 않았다. 구현 첫 작업에서 실제 PostgreSQL로 먼저 확인한다. 안 되면 → Q7의 대안으로 간다.
+- `MyEnrollmentResponse`는 Lombok `@Value` + `@AllArgsConstructor`(Java 8이라 record 금지)에 JPQL용 생성자(순번이 `Long`으로 들어옴)를 하나 더 둔다. 두 생성자는 8번째 인자 타입(Integer/Long)으로만 갈리므로 JPQL 전용 생성자에 주석을 단다.
+- **Hibernate 5.6 확인 결과**: select 절의 상관 서브쿼리, `:status is null` 조건, 생성자 표현식이 이 프로젝트(Hibernate 5.6 + PostgreSQL)에서 **위 JPQL 그대로 동작**했다(T1에서 확인, 근거 `MyEnrollmentRepositoryTest`). Q7 대안은 쓰지 않았다.
 - 서비스: `MyEnrollmentQueryService`(`@Transactional(readOnly = true)`) 하나를 새로 둔다. 기존 `EnrollmentService`(변경·락)와 조회를 나눈다. Controller → Service → Repository 규칙을 지킨다.
 
 ## 4. 스키마 변경: `V5__add_enrollment_employee_index.sql`
@@ -116,8 +116,8 @@ CREATE INDEX idx_enrollment_employee_applied ON enrollment (employee_id, applied
 
 | 항목 | 내용 |
 |---|---|
-| 새 파일 | `MyEnrollmentResponse`, `MyEnrollmentQueryService`, `V5__...sql`, 테스트 2개 |
-| 수정 | `EnrollmentController`(메서드 1개), `EnrollmentRepository`(쿼리 1개) |
+| 새 파일 | `MyEnrollmentResponse`, `MyEnrollmentQueryService`, `MyEnrollmentController`(`/api/v1/me`), `V5__...sql`, 테스트 3개(`MyEnrollmentRepositoryTest`, `MyEnrollmentsTest`, `MyEnrollmentControllerTest`) |
+| 수정 | `EnrollmentRepository`(쿼리 1개). 기존 `EnrollmentController`는 경로(`/api/v1/enrollments`)가 달라 바꾸지 않고 새 컨트롤러로 분리했다(구현계획 T2) |
 | 프론트 | 클라이언트 재생성(`listMyEnrollments`, `MyEnrollmentResponse`). 화면은 Step 15 |
 | 규모 | 파일 약 7개, diff 수백 줄 예상 |
 
