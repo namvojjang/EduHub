@@ -9,5 +9,8 @@
     "generate:api": "npm run generate:api -w packages/api-client",
     "dev:course": "npm run dev -w apps/course-mfe",
     "test": "npm test --workspaces --if-present"
+  },
+  "devDependencies": {
+    "prettier": "3.9.10"
   }
 }

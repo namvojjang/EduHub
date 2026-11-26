@@ -34,6 +34,12 @@ cd backend && ./gradlew bootRun         # 실행 (dev 프로필, .env.example의
 - 빌드와 테스트는 사람이 자기 터미널에서 직접 돌릴 수 있어야 한다. Gradle 래퍼(`gradlew`, `gradle/wrapper/`)는 커밋한다.
 - 팀원이 AI 없이도 구조와 핵심 파일을 설명할 수 있어야 한다 (NFR-08). 의도가 드러나지 않는 추상화는 피한다.
 
+## 자동화 (훅, `.claude/hooks/`)
+
+- 파일 수정 시 자동 포맷(Java: Spotless, TS: prettier), 보호 파일(운영 설정·`.env`·기존 마이그레이션·생성 API 클라이언트)과 위험 명령(운영 접속·`flywayClean`·강제 푸시·main 직접 푸시)은 훅이 차단한다. 차단 메시지의 안내를 따른다.
+- 백엔드에 커밋 안 된 변경이 있으면 응답을 마칠 때 `./gradlew test`가 돈다. 실패가 로컬 DB 꺼짐 같은 코드 밖 원인이면 고치지 말고 사람에게 알린다.
+- 훅은 Git Bash와 `jq`가 필요하다 (Windows: `winget install jqlang.jq` 후 앱 재시작).
+
 ## 개발 진행 절차 (기능 단위)
 
 1. 시작: /fr-start <요구사항ID> → 설계명세(docs/design/) → 개발자 승인 → 구현계획(docs/plans/) → 개발자 승인
