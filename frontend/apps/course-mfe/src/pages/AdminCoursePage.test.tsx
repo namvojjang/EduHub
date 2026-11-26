@@ -98,6 +98,19 @@ describe('AdminCoursePage', () => {
     expect(screen.getByRole('menuitem', { name: '모집 마감', hidden: true })).toBeInTheDocument();
   });
 
+  it('L1 모든 상태의 회차 행에 명단 링크가 있다', () => {
+    renderPage();
+
+    expect(screen.getByRole('link', { name: '2030-01-06 09:00 회차 명단' })).toHaveAttribute(
+      'href',
+      '/admin/sessions/70/roster',
+    );
+    expect(screen.getByRole('link', { name: '2030-02-03 09:00 회차 명단' })).toHaveAttribute(
+      'href',
+      '/admin/sessions/71/roster',
+    );
+  });
+
   it('회차 추가 대화상자에서 저장하면 createSession을 부른다', async () => {
     actions.createSession.mockResolvedValue({});
     renderPage();

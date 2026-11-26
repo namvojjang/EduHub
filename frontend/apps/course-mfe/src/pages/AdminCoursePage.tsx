@@ -221,6 +221,7 @@ export function AdminCoursePage() {
                       <Table.Th ta="right">정원</Table.Th>
                       <Table.Th ta="right">남은 자리</Table.Th>
                       <Table.Th>상태</Table.Th>
+                      <Table.Th w={80}>명단</Table.Th>
                       <Table.Th w={60} ta="right">
                         관리
                       </Table.Th>
@@ -243,6 +244,18 @@ export function AdminCoursePage() {
                             </Badge>
                           ) : (
                             '-'
+                          )}
+                        </Table.Td>
+                        <Table.Td>
+                          {session.id != null && (
+                            <Anchor
+                              component={Link}
+                              to={`/admin/sessions/${session.id}/roster`}
+                              size="sm"
+                              aria-label={`${formatDateTime(session.startAt)} 회차 명단`}
+                            >
+                              명단
+                            </Anchor>
                           )}
                         </Table.Td>
                         <Table.Td ta="right">

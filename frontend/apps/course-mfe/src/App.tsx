@@ -2,6 +2,7 @@ import { Route, Routes } from 'react-router-dom';
 import { LoginPage } from './auth/LoginPage';
 import { RequireAuth } from './auth/RequireAuth';
 import { MyEnrollmentsPage } from './enrollment/MyEnrollmentsPage';
+import { RosterPage } from './enrollment/RosterPage';
 import { AdminCourseListPage } from './pages/AdminCourseListPage';
 import { AdminCoursePage } from './pages/AdminCoursePage';
 import { CourseDetailPage } from './pages/CourseDetailPage';
@@ -36,6 +37,14 @@ export function App() {
         element={
           <RequireAuth admin>
             <AdminCoursePage />
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/admin/sessions/:sessionId/roster"
+        element={
+          <RequireAuth admin>
+            <RosterPage />
           </RequireAuth>
         }
       />
