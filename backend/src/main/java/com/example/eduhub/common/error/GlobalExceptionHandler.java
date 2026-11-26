@@ -26,6 +26,12 @@ public class GlobalExceptionHandler {
         .body(new ErrorResponse(e.getCode(), e.getMessage()));
   }
 
+  @ExceptionHandler(UnauthorizedException.class)
+  public ResponseEntity<ErrorResponse> handleUnauthorized(UnauthorizedException e) {
+    return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+        .body(new ErrorResponse(e.getCode(), e.getMessage()));
+  }
+
   /** @Valid 검증 실패. 어떤 필드가 왜 틀렸는지 한 줄로 알려 준다. */
   @ExceptionHandler(MethodArgumentNotValidException.class)
   public ResponseEntity<ErrorResponse> handleInvalid(MethodArgumentNotValidException e) {
