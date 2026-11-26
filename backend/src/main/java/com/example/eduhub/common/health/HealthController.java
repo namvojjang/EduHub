@@ -1,6 +1,7 @@
 package com.example.eduhub.common.health;
 
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import java.util.Collections;
 import java.util.Map;
@@ -13,6 +14,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/health")
 public class HealthController {
 
+  @SecurityRequirements()
   @Operation(summary = "서버 상태 확인", description = "서버가 요청을 받을 수 있으면 status=UP을 돌려준다.")
   @GetMapping
   public Map<String, String> health() {

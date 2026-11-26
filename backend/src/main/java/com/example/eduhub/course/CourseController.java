@@ -7,6 +7,7 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springdoc.api.annotations.ParameterObject;
@@ -27,6 +28,7 @@ public class CourseController {
 
   private final CourseQueryService courseQueryService;
 
+  @SecurityRequirements()
   @Operation(summary = "과정 목록 조회 (제목 키워드·분류 검색, 페이지는 0부터)")
   @GetMapping
   public PageResponse<CourseSummaryResponse> list(
@@ -38,6 +40,7 @@ public class CourseController {
     return courseQueryService.search(keyword, category, pageable);
   }
 
+  @SecurityRequirements()
   @Operation(summary = "과정 상세와 회차 목록 조회")
   // springdoc 1.x는 @ApiResponse를 하나라도 직접 달면 200을 자동으로 만들지 않는다. 200도 명시한다.
   @ApiResponse(
