@@ -45,13 +45,13 @@
 - 없는 회차 → 404 `SESSION_NOT_FOUND`
 
 ### 2-3. 수료·미수료 처리 (enrollment 패키지)
-`POST /api/v1/admin/sessions/{sessionId}/completions` (operationId `recordCompletions`) → `200 CompletionResult`
+`POST /api/v1/admin/sessions/{sessionId}/completions` (operationId `recordCompletions`) → `200 CompletionResponse`
 
 요청 `CompletionRequest`
 
 | 필드 | 타입 | 검증 |
 |---|---|---|
-| result | `CompletionResult` enum: `COMPLETED` \| `NOT_COMPLETED` | `@NotNull` |
+| result | `CompletionOutcome` enum: `COMPLETED` \| `NOT_COMPLETED` (신청 상태 `EnrollmentStatus`와 헷갈리지 않게 별도 이름) | `@NotNull` |
 | employeeIds | `List<Long>` | `@NotEmpty`, `@Size(max = 200)`, 원소 `@NotNull` |
 
 응답 `CompletionResponse`: `processed: List<Long>`(처리된 사원 ID), `failed: List<{employeeId, reason, code}>`

@@ -32,6 +32,12 @@ public interface EnrollmentRepository extends JpaRepository<Enrollment, Long> {
   Optional<Enrollment> findFirstBySessionIdAndStatusOrderByAppliedAtAscIdAsc(
       Long sessionId, EnrollmentStatus status);
 
+  /** FR-08 수료 처리: 회차·사원 ID 목록으로 신청을 한 번에 읽는다. */
+  List<Enrollment> findBySessionIdAndEmployeeIdIn(Long sessionId, Collection<Long> employeeIds);
+
+  /** FR-08 회차 완료 때 남은 대기 취소용. */
+  List<Enrollment> findBySessionIdAndStatus(Long sessionId, EnrollmentStatus status);
+
   long countBySessionIdAndStatus(Long sessionId, EnrollmentStatus status);
 
   boolean existsByCourseIdAndEmployeeIdAndStatusIn(
