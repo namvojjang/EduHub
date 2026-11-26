@@ -1,6 +1,11 @@
 import { AxiosError, AxiosHeaders } from 'axios';
 import { describe, expect, it } from 'vitest';
-import { isSessionNotFound, rosterLoadErrorMessage } from './rosterLabels';
+import {
+  failureReasonLabel,
+  isSessionNotFound,
+  rosterErrorMessage,
+  rosterLoadErrorMessage,
+} from './rosterLabels';
 
 function axiosError(status: number, data: unknown) {
   const config = { headers: new AxiosHeaders() };
@@ -31,6 +36,35 @@ describe('rosterLoadErrorMessage', () => {
       '잠시 후',
     );
     expect(rosterLoadErrorMessage(new Error('서버 오류'))).toBe('서버 오류');
+  });
+});
+
+describe('rosterErrorMessage', () => {
+  it('409 code별 고정 문구', () => {
+    const msg = (code: string) => rosterErrorMessage(axiosError(409, { code, message: '회차 4' }));
+    expect(msg('SESSION_NOT_STARTED')).toBe('회차 시작 전에는 교육 완료로 처리할 수 없습니다.');
+    expect(msg('SESSION_ALREADY_COMPLETED')).toBe('이미 교육 완료된 회차입니다.');
+    expect(msg('SESSION_NOT_COMPLETED')).toBe('교육 완료 처리 후 수료를 기록할 수 있습니다.');
+  });
+
+  it('401은 null, 알 수 없는 409와 그 밖은 서버 message', () => {
+    expect(rosterErrorMessage(axiosError(401, { code: 'UNAUTHORIZED', message: 'x' }))).toBeNull();
+    expect(rosterErrorMessage(axiosError(409, { code: 'OTHER', message: '충돌' }))).toBe('충돌');
+    expect(rosterErrorMessage(new Error('네트워크 오류'))).toBe('네트워크 오류');
+  });
+});
+
+describe('failureReasonLabel', () => {
+  it('알려진 code는 고정 문구', () => {
+    expect(failureReasonLabel('NOT_ENROLLED', 'x')).toBe('신청 없음');
+    expect(failureReasonLabel('WAITING', 'x')).toBe('대기 중');
+    expect(failureReasonLabel('CANCELLED', 'x')).toBe('취소됨');
+    expect(failureReasonLabel('ALREADY_RECORDED', 'x')).toBe('이미 기록됨');
+  });
+
+  it('모르는 code는 서버 reason, 둘 다 없으면 code', () => {
+    expect(failureReasonLabel('NEW_CODE', '서버 사유')).toBe('서버 사유');
+    expect(failureReasonLabel('NEW_CODE')).toBe('NEW_CODE');
   });
 });
 
