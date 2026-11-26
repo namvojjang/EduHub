@@ -17,6 +17,7 @@ npm run build -w apps/course-mfe      # course-mfe 빌드
 
 - React 18 + TypeScript, npm workspaces.
 - Module Federation으로 화면을 나눈다: `shell`(호스트), `course-mfe`(과정·회차), `enrollment-mfe`(신청·대기·수료).
+- `src/enrollment/`는 6회차 `enrollment-mfe`가 된다. `pages/`와 과정 전용 hooks·components를 import하지 않는다(공용 `EmptyState`, `formatDateTime`, `api/`, `auth/`는 허용).
 
 ## UI
 

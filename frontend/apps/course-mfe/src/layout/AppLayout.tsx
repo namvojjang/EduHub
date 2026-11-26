@@ -173,10 +173,12 @@ export function AppLayout({ children }: { children: ReactNode }) {
           onClick={close}
         />
         <NavLink
+          component={Link}
+          to="/my/enrollments"
           label="내 신청 내역"
-          description="4주차 · FR-07"
           leftSection={<IconHistory size={18} />}
-          disabled
+          active={pathname === '/my/enrollments'}
+          onClick={close}
         />
         {isAdmin && (
           <>

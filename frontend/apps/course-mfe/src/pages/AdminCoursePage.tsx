@@ -113,7 +113,9 @@ export function AdminCoursePage() {
   const confirmCloseSession = (session: SessionResponse) => {
     modals.openConfirmModal({
       title: '모집 마감',
-      children: <Text size="sm">{`${formatDateTime(session.startAt)} 회차의 모집을 마감할까요?`}</Text>,
+      children: (
+        <Text size="sm">{`${formatDateTime(session.startAt)} 회차의 모집을 마감할까요?`}</Text>
+      ),
       labels: { confirm: '모집 마감', cancel: '취소' },
       confirmProps: { color: 'red' },
       onConfirm: () => closeSession(session),
@@ -131,7 +133,7 @@ export function AdminCoursePage() {
         </Text>
       </Breadcrumbs>
 
-      {loading && (
+      {loading && !data && (
         <Stack role="status" aria-label="불러오는 중" aria-busy="true" gap="md">
           <Skeleton height={160} radius="lg" />
           <Skeleton height={200} radius="lg" />
@@ -182,7 +184,11 @@ export function AdminCoursePage() {
                   </Text>
                 )}
               </Stack>
-              <Button variant="default" leftSection={<IconPencil size={16} />} onClick={() => setCourseDialogOpen(true)}>
+              <Button
+                variant="default"
+                leftSection={<IconPencil size={16} />}
+                onClick={() => setCourseDialogOpen(true)}
+              >
                 과정 정보 수정
               </Button>
             </Group>
@@ -229,7 +235,10 @@ export function AdminCoursePage() {
                         <Table.Td ta="right">{session.remainingSeats ?? '-'}</Table.Td>
                         <Table.Td>
                           {session.status ? (
-                            <Badge variant="light" color={SESSION_STATUS_COLOR[session.status] ?? 'gray'}>
+                            <Badge
+                              variant="light"
+                              color={SESSION_STATUS_COLOR[session.status] ?? 'gray'}
+                            >
                               {SESSION_STATUS_LABEL[session.status] ?? session.status}
                             </Badge>
                           ) : (
@@ -250,7 +259,11 @@ export function AdminCoursePage() {
                                 </ActionIcon>
                               </Menu.Target>
                               <Menu.Dropdown>
-                                <Menu.Item onClick={() => setSessionDialog({ mode: 'edit', session })}>수정</Menu.Item>
+                                <Menu.Item
+                                  onClick={() => setSessionDialog({ mode: 'edit', session })}
+                                >
+                                  수정
+                                </Menu.Item>
                                 <Menu.Item
                                   color="red"
                                   disabled={actions.pending}

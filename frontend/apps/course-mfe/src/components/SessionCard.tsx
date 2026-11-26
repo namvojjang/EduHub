@@ -1,6 +1,6 @@
-import { Badge, Button, Card, Group, Progress, Stack, Text, Tooltip } from '@mantine/core';
+import { Badge, Card, Group, Progress, Stack, Text } from '@mantine/core';
 import { IconMapPin } from '@tabler/icons-react';
-import { useId } from 'react';
+import type { ReactNode } from 'react';
 import { SESSION_STATUS_COLOR, SESSION_STATUS_LABEL } from '../constants/statusLabels';
 
 interface SessionCardProps {
@@ -9,6 +9,8 @@ interface SessionCardProps {
   capacity?: number; // 생성된 API 타입이 모두 선택값이라 그대로 받는다
   remainingSeats?: number;
   status?: string;
+  /** 카드 오른쪽 아래에 그릴 동작(신청 버튼 등). 이 컴포넌트는 내용을 모른다. */
+  action?: ReactNode;
 }
 
 /** "2026-12-01T09:00:00" → "2026-12-01 09:00" */
@@ -18,16 +20,25 @@ export function formatDateTime(value?: string): string {
 
 const NEARLY_FULL_RATIO = 0.2; // 남은/정원이 이 값 이하면 마감 임박
 
-// 회차 한 장: 일정, 장소, 상태, 남은 자리(Progress), 신청 버튼(아직 비활성).
-export function SessionCard({ startAt, place, capacity, remainingSeats, status }: SessionCardProps) {
-  const noticeId = useId();
+// 회차 한 장: 일정, 장소, 상태, 남은 자리(Progress). 신청 버튼 등은 action 슬롯에 페이지가 끼운다.
+export function SessionCard({
+  startAt,
+  place,
+  capacity,
+  remainingSeats,
+  status,
+  action,
+}: SessionCardProps) {
   const known = capacity !== undefined && capacity > 0 && remainingSeats !== undefined;
   const full = remainingSeats === 0;
   // 마감 임박은 모집 중인 회차에만 붙인다
-  const nearlyFull = status === 'RECRUITING' && known && !full && remainingSeats / capacity <= NEARLY_FULL_RATIO;
+  const nearlyFull =
+    status === 'RECRUITING' && known && !full && remainingSeats / capacity <= NEARLY_FULL_RATIO;
   const color = full ? 'red' : nearlyFull ? 'orange' : 'teal';
   // 진행 막대는 확정된 비율(정원 - 남은) / 정원
-  const filled = known ? Math.min(100, Math.max(0, ((capacity - remainingSeats) / capacity) * 100)) : 0;
+  const filled = known
+    ? Math.min(100, Math.max(0, ((capacity - remainingSeats) / capacity) * 100))
+    : 0;
 
   return (
     <Card withBorder padding="md">
@@ -68,20 +79,7 @@ export function SessionCard({ startAt, place, capacity, remainingSeats, status }
             {` / ${capacity ?? '-'}`}
           </Text>
         </Stack>
-        {/* 비활성 버튼은 마우스 이벤트를 받지 못하므로 감싸서 Tooltip을 띄운다 */}
-        <Stack gap={4} align="flex-end">
-          <Tooltip label="수강 신청 화면 준비 중 (enrollment-mfe)">
-            <span>
-              <Button disabled aria-describedby={noticeId}>
-                신청하기
-              </Button>
-            </span>
-          </Tooltip>
-          {/* Tooltip은 키보드·스크린리더에 안 보이므로 같은 안내를 항상 보여 준다 */}
-          <Text id={noticeId} size="xs" c="dimmed">
-            수강 신청 화면 준비 중
-          </Text>
-        </Stack>
+        {action}
       </Group>
     </Card>
   );

@@ -77,10 +77,19 @@ describe('AppLayout', () => {
     expect(screen.getByRole('link', { name: /과정 관리/ })).not.toHaveAttribute('data-active');
   });
 
-  it('내 신청 내역은 비활성이다', () => {
+  it('L1 내 신청 내역은 /my/enrollments 링크이고 다른 경로에서는 active가 아니다', () => {
     renderAt('/');
-    const item = screen.getByText('내 신청 내역').closest('a, button');
-    expect(item).toHaveAttribute('data-disabled', 'true');
+    const link = screen.getByRole('link', { name: /내 신청 내역/ });
+    expect(link).toHaveAttribute('href', '/my/enrollments');
+    expect(link).not.toHaveAttribute('data-active');
+  });
+
+  it('/my/enrollments에서는 내 신청 내역 내비가 active다', () => {
+    renderAt('/my/enrollments');
+    expect(screen.getByRole('link', { name: /내 신청 내역/ })).toHaveAttribute(
+      'data-active',
+      'true',
+    );
   });
 
   it('테마 전환 버튼을 누르면 색 스킴이 바뀐다', () => {
