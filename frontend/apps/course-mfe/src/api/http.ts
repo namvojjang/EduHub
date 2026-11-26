@@ -60,10 +60,17 @@ http.interceptors.response.use(
   (response) => response,
   (error) => {
     // 403(권한 없음)은 로그인 상태와 무관하므로 아무것도 하지 않는다.
+    // 401은 "지금 저장된 토큰"을 붙여 보낸 요청일 때만 만료로 본다.
+    // - 토큰 없이 보낸 요청의 401은 원래 로그인이 필요한 것이지 만료가 아니다.
+    // - 응답이 늦게 오는 사이 로그아웃·재로그인으로 토큰이 비었거나 바뀌었다면, 옛 토큰의 401이
+    //   새 토큰을 지우거나 로그아웃 직후 만료 안내를 띄우면 안 되므로 무시한다.
+    const current = tokenStore.get();
     if (
       axios.isAxiosError(error) &&
       error.response?.status === 401 &&
-      !(error.config && isLoginRequest(error.config))
+      !(error.config && isLoginRequest(error.config)) &&
+      current !== null &&
+      error.config?.headers?.get('Authorization') === `Bearer ${current}`
     ) {
       tokenStore.clear();
       window.dispatchEvent(new CustomEvent(UNAUTHORIZED_EVENT));

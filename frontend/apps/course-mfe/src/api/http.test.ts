@@ -1,5 +1,6 @@
 import { AxiosError, type AxiosRequestConfig, type InternalAxiosRequestConfig } from 'axios';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { authApi } from './clients';
 import { http, tokenStore, UNAUTHORIZED_EVENT } from './http';
 
 const LOGIN_URL = '/api/v1/auth/login';
@@ -72,11 +73,60 @@ describe('http', () => {
     expect(events).toBe(1);
   });
 
+  it('H4b 토큰 없는 401은 이벤트 없음', async () => {
+    const { result } = send(401, { method: 'get', url: '/api/v1/me' });
+    await expect(result).rejects.toMatchObject({ response: { status: 401 } });
+    expect(events).toBe(0);
+  });
+
   it('H5 로그인 요청의 401은 토큰 삭제도 이벤트도 없다', async () => {
     tokenStore.save('tok-1', user);
     const { result } = send(401, { method: 'post', url: LOGIN_URL });
     await expect(result).rejects.toMatchObject({ response: { status: 401 } });
     expect(tokenStore.get()).toBe('tok-1');
+    expect(events).toBe(0);
+  });
+
+  it('H5b 생성 클라이언트 authApi.login도 헤더가 없고 401에 이벤트가 없다', async () => {
+    tokenStore.save('tok-1', user);
+    const seen: InternalAxiosRequestConfig[] = [];
+    await expect(
+      authApi.login(
+        { employeeNo: 'E1001', password: 'x' },
+        { adapter: fakeAdapter(401, seen) as never },
+      ),
+    ).rejects.toMatchObject({ response: { status: 401 } });
+    expect(seen[0].headers.get('Authorization')).toBeFalsy();
+    expect(tokenStore.get()).toBe('tok-1');
+    expect(events).toBe(0);
+  });
+
+  it('H4c 401 도착 전에 다른 토큰으로 바뀌면 토큰 유지, 이벤트 없음', async () => {
+    tokenStore.save('tok-1', user);
+    const seen: InternalAxiosRequestConfig[] = [];
+    const inner = fakeAdapter(401, seen);
+    const adapter = (config: InternalAxiosRequestConfig) => {
+      tokenStore.save('tok-2', user); // 응답이 오기 전 다른 탭에서 재로그인
+      return inner(config);
+    };
+    await expect(
+      http.request({ method: 'get', url: '/api/v1/me', adapter: adapter as never }),
+    ).rejects.toMatchObject({ response: { status: 401 } });
+    expect(tokenStore.get()).toBe('tok-2');
+    expect(events).toBe(0);
+  });
+
+  it('H4d 401 도착 전에 clear되면 이벤트 없음', async () => {
+    tokenStore.save('tok-1', user);
+    const seen: InternalAxiosRequestConfig[] = [];
+    const inner = fakeAdapter(401, seen);
+    const adapter = (config: InternalAxiosRequestConfig) => {
+      tokenStore.clear(); // 응답이 오기 전 로그아웃
+      return inner(config);
+    };
+    await expect(
+      http.request({ method: 'get', url: '/api/v1/me', adapter: adapter as never }),
+    ).rejects.toMatchObject({ response: { status: 401 } });
     expect(events).toBe(0);
   });
 

@@ -1,8 +1,15 @@
-import { fireEvent, screen } from '@testing-library/react';
-import { Link, MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
-import { describe, expect, it } from 'vitest';
-import { renderWithProviders } from '../test/render';
+import { fireEvent, screen, waitFor } from '@testing-library/react';
+import { Link, Route, Routes, useLocation } from 'react-router-dom';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { authApi } from '../api/clients';
+import { tokenStore } from '../api/http';
+import { renderWithAuth } from '../test/render';
 import { AppLayout } from './AppLayout';
+
+vi.mock('../api/clients', () => ({ authApi: { login: vi.fn(), getMe: vi.fn() } }));
+
+const employee = { employeeId: 1, employeeNo: 'E1001', name: '홍길동', role: 'EMPLOYEE' };
+const admin = { employeeId: 9, employeeNo: 'A0001', name: '김관리', role: 'ADMIN' };
 
 // 현재 location을 화면에 보여 주는 요소(이동 확인용)
 function LocationDisplay() {
@@ -10,17 +17,26 @@ function LocationDisplay() {
   return <div data-testid="location">{pathname + search}</div>;
 }
 
-function renderAt(path: string) {
-  return renderWithProviders(
-    <MemoryRouter initialEntries={[path]}>
-      <AppLayout>
-        <Routes>
-          <Route path="*" element={<LocationDisplay />} />
-        </Routes>
-      </AppLayout>
-    </MemoryRouter>,
+// 로그인 상태(tokenStore)를 렌더 전에 넣는다. 기본은 관리자(과정 관리 메뉴가 보여야 하는 테스트가 많다).
+function renderAt(path: string, user: typeof admin | typeof employee | null = admin) {
+  if (user) {
+    tokenStore.save('tok-1', user);
+    vi.mocked(authApi.getMe).mockResolvedValue({ data: user } as never);
+  }
+  return renderWithAuth(
+    <AppLayout>
+      <Routes>
+        <Route path="*" element={<LocationDisplay />} />
+      </Routes>
+    </AppLayout>,
+    { route: path },
   );
 }
+
+beforeEach(() => {
+  localStorage.clear();
+  vi.mocked(authApi.getMe).mockReset();
+});
 
 describe('AppLayout', () => {
   it('/admin/courses에서는 과정 관리 내비가 active다', () => {
@@ -79,12 +95,10 @@ describe('AppLayout', () => {
   });
 
   it('URL이 바뀌면 검색 입력이 따라간다', () => {
-    renderWithProviders(
-      <MemoryRouter initialEntries={['/']}>
-        <AppLayout>
-          <Link to="/?keyword=x">x 검색</Link>
-        </AppLayout>
-      </MemoryRouter>,
+    renderWithAuth(
+      <AppLayout>
+        <Link to="/?keyword=x">x 검색</Link>
+      </AppLayout>,
     );
     const input = screen.getByPlaceholderText('과정명으로 검색');
     expect(input).toHaveValue('');
@@ -106,6 +120,63 @@ describe('AppLayout', () => {
     expect(burger).toHaveAttribute('aria-expanded', 'false');
     expect(burger).toHaveAttribute('aria-controls', 'app-navbar');
     fireEvent.click(burger);
-    expect(screen.getByRole('button', { name: '메뉴 닫기' })).toHaveAttribute('aria-expanded', 'true');
+    expect(screen.getByRole('button', { name: '메뉴 닫기' })).toHaveAttribute(
+      'aria-expanded',
+      'true',
+    );
+  });
+
+  it('로그인 화면에서도 검색창이 동작한다', () => {
+    renderAt('/login', null);
+    const input = screen.getByPlaceholderText('과정명으로 검색');
+    fireEvent.change(input, { target: { value: 'abc' } });
+    fireEvent.submit(input);
+    expect(screen.getByTestId('location')).toHaveTextContent('/?keyword=abc');
+  });
+});
+
+describe('AppLayout 로그인 상태별 메뉴 (L1)', () => {
+  it('L1 비로그인: 로그인 버튼이 있고 과정 관리·사용자 메뉴는 없다', () => {
+    renderAt('/', null);
+    expect(screen.getByRole('link', { name: '로그인' })).toHaveAttribute('href', '/login');
+    expect(screen.queryByRole('link', { name: /과정 관리/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: '사용자 메뉴' })).not.toBeInTheDocument();
+  });
+
+  it('로그인 화면에서는 헤더 로그인 버튼을 숨긴다', () => {
+    renderAt('/login', null);
+    expect(screen.queryByRole('link', { name: '로그인' })).not.toBeInTheDocument();
+  });
+
+  it('L1 사원: 이름(아바타 첫 글자)이 보이고 과정 관리는 없다', () => {
+    renderAt('/', employee);
+    expect(screen.getByRole('button', { name: '사용자 메뉴' })).toHaveTextContent('홍');
+    expect(screen.getByRole('button', { name: '사용자 메뉴' })).toHaveTextContent('홍길동');
+    expect(screen.queryByRole('link', { name: '로그인' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: /과정 관리/ })).not.toBeInTheDocument();
+    expect(screen.getByText('내 신청 내역')).toBeInTheDocument();
+  });
+
+  it('L1 관리자: 과정 관리가 보인다', () => {
+    renderAt('/', admin);
+    expect(screen.getByRole('link', { name: /과정 관리/ })).toBeInTheDocument();
+  });
+
+  it('사용자 메뉴에 이름·사번·역할이 보인다', async () => {
+    renderAt('/', employee);
+    fireEvent.click(screen.getByRole('button', { name: '사용자 메뉴' }));
+    expect(await screen.findByText('사번 E1001', {}, { timeout: 2000 })).toBeInTheDocument();
+    expect(screen.getByText('사원')).toBeInTheDocument();
+  });
+
+  it('로그아웃하면 토큰을 지우고 /로 이동하고 토스트를 띄운다', async () => {
+    renderAt('/admin/courses', admin);
+    fireEvent.click(screen.getByRole('button', { name: '사용자 메뉴' }));
+    fireEvent.click(await screen.findByRole('menuitem', { name: '로그아웃', hidden: true }));
+    expect(tokenStore.get()).toBeNull();
+    expect(screen.getByTestId('location')).toHaveTextContent(/^\/$/);
+    expect(await screen.findByText('로그아웃했습니다')).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByRole('link', { name: '로그인' })).toBeInTheDocument());
+    expect(screen.queryByRole('link', { name: /과정 관리/ })).not.toBeInTheDocument();
   });
 });

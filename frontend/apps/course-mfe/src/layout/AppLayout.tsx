@@ -3,9 +3,10 @@ import {
   AppShell,
   Avatar,
   Burger,
+  Button,
   Group,
+  Menu,
   NavLink,
-  Stack,
   Text,
   TextInput,
   ThemeIcon,
@@ -14,10 +15,19 @@ import {
   useMantineColorScheme,
 } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
-import { IconBooks, IconHistory, IconMoon, IconSearch, IconSettings, IconSun } from '@tabler/icons-react';
+import {
+  IconBooks,
+  IconHistory,
+  IconLogout,
+  IconMoon,
+  IconSearch,
+  IconSettings,
+  IconSun,
+} from '@tabler/icons-react';
 import { useEffect, useState } from 'react';
 import type { FormEvent, ReactNode } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { useAuth } from '../auth/AuthContext';
 
 const NAVBAR_ID = 'app-navbar';
 
@@ -28,6 +38,8 @@ export function AppLayout({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
   const { setColorScheme } = useMantineColorScheme();
   const computed = useComputedColorScheme('light');
+  const { user, logout } = useAuth();
+  const isAdmin = user?.role === 'ADMIN';
 
   // 현재 URL의 keyword와 검색 입력을 맞춘다.
   const urlKeyword = new URLSearchParams(search).get('keyword') ?? '';
@@ -67,7 +79,12 @@ export function AppLayout({ children }: { children: ReactNode }) {
             />
             <UnstyledButton component={Link} to="/" aria-label="EduHub 홈">
               <Group gap="xs" wrap="nowrap">
-                <ThemeIcon size="lg" variant="gradient" gradient={{ from: 'indigo', to: 'cyan' }} autoContrast>
+                <ThemeIcon
+                  size="lg"
+                  variant="gradient"
+                  gradient={{ from: 'indigo', to: 'cyan' }}
+                  autoContrast
+                >
                   <Text fw={700} size="sm">
                     E
                   </Text>
@@ -103,18 +120,41 @@ export function AppLayout({ children }: { children: ReactNode }) {
             >
               {computed === 'dark' ? <IconSun size={18} /> : <IconMoon size={18} />}
             </ActionIcon>
-            {/* TODO(NFR-03): 인증 연동 뒤 실제 사용자 이름으로 교체. 지금은 가짜 이름을 넣지 않는다. */}
-            <Group gap="xs" wrap="nowrap" visibleFrom="sm">
-              <Avatar radius="xl" size="md" color="indigo" />
-              <Stack gap={0}>
-                <Text size="sm" fw={600} lh={1.2}>
-                  임직원
-                </Text>
-                <Text size="xs" c="dimmed" lh={1.2}>
-                  로그인 연동 전
-                </Text>
-              </Stack>
-            </Group>
+            {user ? (
+              <Menu position="bottom-end" withinPortal>
+                <Menu.Target>
+                  <UnstyledButton aria-label="사용자 메뉴">
+                    <Group gap="xs" wrap="nowrap">
+                      <Avatar radius="xl" size="md" color="indigo">
+                        {user.name?.charAt(0)}
+                      </Avatar>
+                      <Text size="sm" fw={600} visibleFrom="sm">
+                        {user.name}
+                      </Text>
+                    </Group>
+                  </UnstyledButton>
+                </Menu.Target>
+                <Menu.Dropdown>
+                  <Menu.Label>{user.name}</Menu.Label>
+                  <Menu.Label>사번 {user.employeeNo}</Menu.Label>
+                  <Menu.Label>{user.role === 'ADMIN' ? '관리자' : '사원'}</Menu.Label>
+                  <Menu.Divider />
+                  <Menu.Item leftSection={<IconLogout size={16} />} onClick={logout}>
+                    로그아웃
+                  </Menu.Item>
+                </Menu.Dropdown>
+              </Menu>
+            ) : pathname !== '/login' ? (
+              // 로그인 화면에서는 이 버튼을 숨긴다(from이 /login이 되는 것을 막는다).
+              <Button
+                component={Link}
+                to="/login"
+                state={{ from: pathname + search }}
+                variant="default"
+              >
+                로그인
+              </Button>
+            ) : null}
           </Group>
         </Group>
       </AppShell.Header>
@@ -137,17 +177,21 @@ export function AppLayout({ children }: { children: ReactNode }) {
           leftSection={<IconHistory size={18} />}
           disabled
         />
-        <Text size="xs" fw={700} c="dimmed" mt="lg" mb="xs">
-          관리
-        </Text>
-        <NavLink
-          component={Link}
-          to="/admin/courses"
-          label="과정 관리"
-          leftSection={<IconSettings size={18} />}
-          active={adminActive}
-          onClick={close}
-        />
+        {isAdmin && (
+          <>
+            <Text size="xs" fw={700} c="dimmed" mt="lg" mb="xs">
+              관리
+            </Text>
+            <NavLink
+              component={Link}
+              to="/admin/courses"
+              label="과정 관리"
+              leftSection={<IconSettings size={18} />}
+              active={adminActive}
+              onClick={close}
+            />
+          </>
+        )}
       </AppShell.Navbar>
 
       <AppShell.Main bg="light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-8))">
