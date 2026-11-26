@@ -27,6 +27,7 @@ npm run build -w apps/course-mfe      # course-mfe 빌드
 ## 테스트 작성
 
 - 컴포넌트 테스트는 `src/test/render.tsx`의 `renderWithProviders`로 렌더한다.
+- 로그인 상태나 라우터가 필요한 화면은 `renderWithAuth(ui, { route })`로 렌더한다(`MemoryRouter` + `AuthProvider`). 로그인 상태는 렌더 전에 `tokenStore.save(...)`로 넣고, `authApi`는 `vi.mock('../api/clients')`로 대체한다.
 - jsdom에서 Mantine 드롭다운·메뉴 항목은 `getByRole(..., { hidden: true })`가 필요할 수 있다.
 
 ## API 호출 (NFR-04)
@@ -34,3 +35,6 @@ npm run build -w apps/course-mfe      # course-mfe 빌드
 - API 클라이언트는 손으로 쓰지 않는다. 백엔드 OpenAPI 스펙(`/v3/api-docs`)에서 생성한 Axios 클라이언트를 쓴다.
 - 생성된 클라이언트 파일은 직접 고치지 않는다. API가 바뀌면 스펙에서 다시 생성한다.
 - 서버 데이터 조회는 커스텀 훅(`src/hooks/useXxx.ts`)으로 한다.
+- 생성 클라이언트는 `src/api`에서 `http`(토큰 첨부·401 처리가 들어 있는 Axios 인스턴스)로만 만든다: `new XxxApi(undefined, '', http)`.
+- 로그인 요청(`POST /api/v1/auth/login`)에는 토큰을 붙이지 않고, 그 401은 만료로 보지 않는다. 토큰을 붙인 요청이 401이면 토큰을 지우고 `eduhub:unauthorized` 이벤트를 보내며, 403은 토큰을 유지한다 (NFR-03).
+- 토큰·비밀번호·Axios 에러 객체를 console에 남기지 않는다.

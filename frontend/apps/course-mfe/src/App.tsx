@@ -1,4 +1,6 @@
 import { Route, Routes } from 'react-router-dom';
+import { LoginPage } from './auth/LoginPage';
+import { RequireAuth } from './auth/RequireAuth';
 import { AdminCourseListPage } from './pages/AdminCourseListPage';
 import { AdminCoursePage } from './pages/AdminCoursePage';
 import { CourseDetailPage } from './pages/CourseDetailPage';
@@ -10,9 +12,24 @@ export function App() {
     <Routes>
       <Route path="/" element={<CourseListPage />} />
       <Route path="/courses/:id" element={<CourseDetailPage />} />
-      {/* 관리자 화면 (FR-03). 인증(NFR-03)이 생기면 관리자만 들어오게 막는다. */}
-      <Route path="/admin/courses" element={<AdminCourseListPage />} />
-      <Route path="/admin/courses/:id" element={<AdminCoursePage />} />
+      <Route path="/login" element={<LoginPage />} />
+      {/* 관리자 화면 (FR-03). 화면에서도 ADMIN만 들어오게 하지만 실제 차단은 백엔드다 (NFR-03). */}
+      <Route
+        path="/admin/courses"
+        element={
+          <RequireAuth admin>
+            <AdminCourseListPage />
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/admin/courses/:id"
+        element={
+          <RequireAuth admin>
+            <AdminCoursePage />
+          </RequireAuth>
+        }
+      />
     </Routes>
   );
 }
