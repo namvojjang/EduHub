@@ -37,6 +37,10 @@ public interface EnrollmentRepository extends JpaRepository<Enrollment, Long> {
   boolean existsByCourseIdAndEmployeeIdAndStatusIn(
       Long courseId, Long employeeId, Collection<EnrollmentStatus> statuses);
 
+  /** D-03 수료한 과정인지 확인 (신청 사전 확인). */
+  boolean existsByCourseIdAndEmployeeIdAndStatus(
+      Long courseId, Long employeeId, EnrollmentStatus status);
+
   /** FR-07. 과정·회차·대기 순번을 SQL 한 번으로(NFR-02). 순번 기준은 countAhead와 같은 (appliedAt, id)(D-04). */
   @Query(
       "select new com.example.eduhub.enrollment.MyEnrollmentResponse("

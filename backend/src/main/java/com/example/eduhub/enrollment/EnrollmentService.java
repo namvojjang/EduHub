@@ -1,5 +1,6 @@
 package com.example.eduhub.enrollment;
 
+import com.example.eduhub.common.error.ConflictException;
 import com.example.eduhub.course.CourseSession;
 import com.example.eduhub.course.CourseSessionNotFoundException;
 import com.example.eduhub.course.CourseSessionRepository;
@@ -39,6 +40,11 @@ public class EnrollmentService {
     session.requireOpenForEnrollment(now);
 
     Long courseId = session.getCourse().getId();
+    // D-03: 수료한 과정은 다시 신청할 수 없다. 미수료(NOT_COMPLETED)는 다시 신청할 수 있다.
+    if (enrollmentRepository.existsByCourseIdAndEmployeeIdAndStatus(
+        courseId, employeeId, EnrollmentStatus.COMPLETED)) {
+      throw new ConflictException("ALREADY_COMPLETED_COURSE", "이미 수료한 과정입니다: " + courseId);
+    }
     if (enrollmentRepository.existsByCourseIdAndEmployeeIdAndStatusIn(
         courseId,
         employeeId,
