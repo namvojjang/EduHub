@@ -11,7 +11,7 @@
 ./gradlew spotlessApply                                     # 포맷 적용 (google-java-format 1.7)
 ```
 
-- 프로필: `dev`(기본, 로컬 PostgreSQL의 `POSTGRES_DB`), `test`(같은 서버의 `POSTGRES_TEST_DB`, 기본 `eduhub_test`). Docker·Testcontainers는 쓰지 않는다.
+- 프로필: 기본 프로필 없음. 로컬 `./gradlew bootRun`은 dev를 자동 지정. 운영·배포는 반드시 프로필을 지정한다(지정하지 않으면 기동 실패). IDE에서 `EduHubApplication`을 바로 실행할 때는 Active profiles에 `dev`를 넣는다(없으면 DataSource 오류). `dev`(로컬 PostgreSQL의 `POSTGRES_DB`), `test`(같은 서버의 `POSTGRES_TEST_DB`, 기본 `eduhub_test`). Docker·Testcontainers는 쓰지 않는다.
 - 접속 정보는 `POSTGRES_USER`·`POSTGRES_PASSWORD` 등. 루트 `.env`를 `spring.config.import`로 읽는다. 저장소 테스트(`@DataJpaTest`)는 로컬 DB가 떠 있어야 통과한다.
 - 로컬 실행(`bootRun`)에는 `.env`에 `EDUHUB_JWT_SECRET`(32바이트 이상)이 필요하다. 없으면 시작에 실패한다 (NFR-03).
 - Java 8이다. `var`, record, text block을 쓰지 않는다. Spring Boot 2.7이므로 `javax.*` 패키지를 쓴다(`jakarta.*` 아님).

@@ -60,12 +60,16 @@ class AuthIntegrationTest {
   }
 
   private String loginAndGetToken() throws Exception {
+    return loginAndGetToken(employee);
+  }
+
+  private String loginAndGetToken(Employee target) throws Exception {
     MvcResult result =
         mockMvc
             .perform(
                 post("/api/v1/auth/login")
                     .contentType(MediaType.APPLICATION_JSON)
-                    .content(loginBody(employee.getEmployeeNo(), PASSWORD)))
+                    .content(loginBody(target.getEmployeeNo(), PASSWORD)))
             .andExpect(status().isOk())
             .andReturn();
     JsonNode body = objectMapper.readTree(result.getResponse().getContentAsString());
@@ -91,6 +95,32 @@ class AuthIntegrationTest {
         .andExpect(jsonPath("$.employeeNo").value(employee.getEmployeeNo()))
         .andExpect(jsonPath("$.name").value("통합테스트"))
         .andExpect(jsonPath("$.role").value("EMPLOYEE"));
+  }
+
+  @Test
+  void adminTokenCanCallAdminApi() throws Exception {
+    Employee admin = saveEmployee(EmployeeRole.ADMIN);
+
+    mockMvc
+        .perform(
+            get("/api/v1/admin/courses")
+                .header("Authorization", "Bearer " + loginAndGetToken(admin)))
+        .andExpect(status().isOk());
+  }
+
+  @Test
+  void employeeTokenIsForbiddenOnAdminApi() throws Exception {
+    mockMvc
+        .perform(
+            get("/api/v1/admin/courses").header("Authorization", "Bearer " + loginAndGetToken()))
+        .andExpect(status().isForbidden())
+        .andExpect(jsonPath("$.code").value("FORBIDDEN"));
+  }
+
+  private Employee saveEmployee(EmployeeRole role) {
+    String no = UUID.randomUUID().toString().substring(0, 12);
+    return employeeRepository.saveAndFlush(
+        Employee.create(no, "통합관리자", passwordEncoder.encode(PASSWORD), role));
   }
 
   @Test

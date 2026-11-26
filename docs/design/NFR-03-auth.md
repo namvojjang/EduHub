@@ -56,7 +56,7 @@
 |---|---|
 | `POST /api/v1/enrollments`, `GET /api/v1/enrollments/{id}`, `POST /api/v1/enrollments/{id}/cancel` | `X-Employee-Id` 헤더 삭제. 사원 ID는 토큰의 `sub`. 로그인 필요 |
 | `/api/v1/admin/**` (FR-03 전부) | ADMIN만 |
-| `GET /api/v1/courses/**`, `/api/health`, `/swagger-ui/**`, `/v3/api-docs/**` | 공개 (지금과 같음) |
+| `GET /api/v1/courses`, `GET /api/v1/courses/*`, `GET /api/health`, `/swagger-ui/**`, `/v3/api-docs/**` | 공개 (하위 경로는 로그인 필요, 2-3 참고) |
 
 - 경로·요청 본문·응답 본문은 바꾸지 않는다. 교재의 경로(`/api/sessions/{id}/enrollments`, `DELETE`)로 바꾸지 않는다.
 - 교재가 경고한 구멍("`POST /api/v1/courses`가 `anyRequest().authenticated()`에 걸려 사원도 등록 가능")은 이 프로젝트에서는 생기지 않는다. 쓰기 API가 모두 `/api/v1/admin/**` 아래에 있기 때문이다. 그래도 테스트로 막아 둔다 (6장 S9).
@@ -66,7 +66,7 @@
 | 순서 | 요청 | 규칙 |
 |---|---|---|
 | 1 | `POST /api/v1/auth/login` | permitAll |
-| 2 | `GET /api/v1/courses/**`, `GET /api/health`, `/swagger-ui/**`, `/swagger-ui.html`, `/v3/api-docs/**` | permitAll |
+| 2 | `GET /api/v1/courses`, `GET /api/v1/courses/*`(지금 있는 공개 API만. 새로 추가되는 하위 경로는 기본적으로 로그인 필요, 최종 검토 제안 1), `GET /api/health`, `/swagger-ui/**`, `/swagger-ui.html`, `/v3/api-docs/**` | permitAll |
 | 3 | `/api/v1/admin/**` | `hasRole("ADMIN")` |
 | 4 | 그 밖의 모든 요청 | authenticated |
 
@@ -85,7 +85,7 @@
 | 404 | `ENROLLMENT_NOT_FOUND` | 남의 신청 조회·취소 (지금과 같음) | 기존 |
 
 - 401·403은 컨트롤러에 닿기 전에 Security 필터에서 나므로 `@RestControllerAdvice`가 잡지 못한다. 그래서 진입점·거부 처리기 두 개가 `ErrorResponse` JSON을 직접 쓴다. 토큰 파싱 필터를 직접 만드는 것이 아니라 Spring이 제공하는 확장 지점만 채운다.
-- 401 응답에는 표준대로 `WWW-Authenticate: Bearer` 헤더를 둔다.
+- 토큰 문제로 인한 401(`UNAUTHENTICATED`)에만 `WWW-Authenticate: Bearer`를 둔다. 로그인 실패(`LOGIN_FAILED`)는 자격 증명이 본문으로 오므로 두지 않는다.
 
 ## 3. 스키마 변경: `V4__create_employee.sql`
 

@@ -36,8 +36,10 @@ public class SecurityConfig {
                     // NFR-03: 로그인은 공개
                     .antMatchers(HttpMethod.POST, "/api/v1/auth/login")
                     .permitAll()
-                    // FR-01, FR-02: 과정 조회와 상태 확인은 공개
-                    .antMatchers(HttpMethod.GET, "/api/v1/courses/**", "/api/health")
+                    // FR-01, FR-02: 과정 조회와 상태 확인은 공개.
+                    // 지금 있는 공개 API만. 새로 추가되는 하위 경로는 기본적으로 로그인 필요(최종 검토 제안 1)
+                    .antMatchers(
+                        HttpMethod.GET, "/api/v1/courses", "/api/v1/courses/*", "/api/health")
                     .permitAll()
                     // NFR-04: API 문서는 공개
                     .antMatchers("/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**")

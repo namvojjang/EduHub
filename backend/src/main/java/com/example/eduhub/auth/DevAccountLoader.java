@@ -7,6 +7,7 @@ import org.springframework.boot.ApplicationRunner;
 import org.springframework.context.annotation.Profile;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
 /**
  * dev 프로필 전용. 운영 비밀 아님. 운영·테스트 프로필에서는 만들어지지 않는다(설계 Q3).
@@ -24,7 +25,9 @@ public class DevAccountLoader implements ApplicationRunner {
   private final EmployeeRepository employeeRepository;
   private final PasswordEncoder passwordEncoder;
 
+  // 3개 계정이 전부 생기거나 전부 안 생기게 한다(일부만 생기면 count()!=0이라 다시 채워지지 않는다).
   @Override
+  @Transactional
   public void run(ApplicationArguments args) {
     if (employeeRepository.count() != 0) {
       return;

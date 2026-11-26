@@ -164,6 +164,15 @@ class CourseControllerTest {
   }
 
   @Test
+  void nestedCoursePathIsNotPublic() throws Exception {
+    mockMvc
+        .perform(get("/api/v1/courses/1/anything"))
+        .andExpect(status().isUnauthorized())
+        .andExpect(jsonPath("$.code").value("UNAUTHENTICATED"));
+    verifyNoInteractions(courseQueryService);
+  }
+
+  @Test
   void courseListIsPublic() throws Exception {
     given(courseQueryService.search(any(), any(), any(Pageable.class)))
         .willReturn(new PageResponse<>(Collections.emptyList(), 0, 20, 0L));
