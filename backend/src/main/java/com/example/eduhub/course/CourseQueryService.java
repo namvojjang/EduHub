@@ -1,7 +1,10 @@
 package com.example.eduhub.course;
 
 import com.example.eduhub.common.web.PageResponse;
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -15,6 +18,7 @@ public class CourseQueryService {
 
   private final CourseRepository courseRepository;
   private final CourseSessionRepository courseSessionRepository;
+  private final SeatCounter seatCounter;
 
   public PageResponse<CourseSummaryResponse> search(
       String keyword, String category, Pageable pageable) {
@@ -32,6 +36,12 @@ public class CourseQueryService {
             .orElseThrow(() -> new CourseNotFoundException(courseId));
     List<CourseSession> sessions =
         courseSessionRepository.findByCourseIdOrderByStartAtAsc(courseId);
-    return CourseDetailResponse.of(course, sessions);
+    // 회차가 없으면 조회하지 않고, 있으면 회차 전체를 쿼리 1번으로 센다 (NFR-02).
+    Map<Long, Long> occupied =
+        sessions.isEmpty()
+            ? Collections.<Long, Long>emptyMap()
+            : seatCounter.occupiedSeats(
+                sessions.stream().map(CourseSession::getId).collect(Collectors.toList()));
+    return CourseDetailResponse.of(course, sessions, occupied);
   }
 }

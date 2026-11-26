@@ -27,6 +27,8 @@ class CourseAdminServiceTest {
 
   @Mock private CourseSessionRepository courseSessionRepository;
 
+  @Mock private SeatCounter seatCounter;
+
   @InjectMocks private CourseAdminService service;
 
   @Test

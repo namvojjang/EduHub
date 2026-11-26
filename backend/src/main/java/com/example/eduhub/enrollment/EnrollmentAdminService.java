@@ -3,6 +3,7 @@ package com.example.eduhub.enrollment;
 import com.example.eduhub.course.CourseSession;
 import com.example.eduhub.course.CourseSessionNotFoundException;
 import com.example.eduhub.course.CourseSessionRepository;
+import com.example.eduhub.course.SeatCounter;
 import com.example.eduhub.course.SessionResponse;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -32,6 +33,7 @@ public class EnrollmentAdminService {
 
   private final CourseSessionRepository courseSessionRepository;
   private final EnrollmentRepository enrollmentRepository;
+  private final SeatCounter seatCounter;
 
   /**
    * 회차 명단. 명단 쿼리 1번(신청 인원과 무관한 고정 쿼리 수, NFR-02)으로 읽어 확정과 대기로 나눈다. 대기 순번은 (appliedAt, id) 순서대로 1부터
@@ -77,7 +79,9 @@ public class EnrollmentAdminService {
         enrollmentRepository.findBySessionIdAndStatus(sessionId, EnrollmentStatus.WAITING)) {
       waiting.cancel();
     }
-    return SessionResponse.from(session);
+    long occupied =
+        seatCounter.occupiedSeats(Collections.singleton(sessionId)).getOrDefault(sessionId, 0L);
+    return SessionResponse.from(session, occupied);
   }
 
   /**

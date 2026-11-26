@@ -13,15 +13,17 @@ public class SessionResponse {
   int remainingSeats;
   CourseSessionStatus status;
 
-  /** 회차 자신의 필드만 읽는다. 지연 로딩되는 course는 건드리지 않는다 (NFR-02). */
-  public static SessionResponse from(CourseSession session) {
+  /**
+   * 회차 자신의 필드만 읽는다. 지연 로딩되는 course는 건드리지 않는다 (NFR-02). 남은 자리는 정원에서 차지한 자리를 뺀 값이고, 정원을 확정 인원보다 작게 줄인
+   * 경우(D-02 검사 전)에도 음수가 되지 않게 0으로 막는다.
+   */
+  public static SessionResponse from(CourseSession session, long occupied) {
     return new SessionResponse(
         session.getId(),
         session.getStartAt(),
         session.getPlace(),
         session.getCapacity(),
-        // 수강 신청(3주차) 전까지는 정원 그대로. 확정 인원 계산은 그때 붙인다.
-        session.getCapacity(),
+        (int) Math.max(0, session.getCapacity() - occupied),
         session.getStatus());
   }
 }

@@ -1,6 +1,10 @@
 package com.example.eduhub.course;
 
 import com.example.eduhub.common.web.PageResponse;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -18,6 +22,7 @@ public class CourseAdminService {
 
   private final CourseRepository courseRepository;
   private final CourseSessionRepository courseSessionRepository;
+  private final SeatCounter seatCounter;
 
   @Transactional(readOnly = true)
   public PageResponse<AdminCourseSummaryResponse> search(
@@ -52,19 +57,19 @@ public class CourseAdminService {
     CourseSession session =
         courseSessionRepository.save(
             course.openSession(request.getStartAt(), request.getPlace(), request.getCapacity()));
-    return SessionResponse.from(session);
+    return toSessionResponse(session);
   }
 
   public SessionResponse updateSession(Long sessionId, SessionRequest request) {
     CourseSession session = findSession(sessionId);
     session.update(request.getStartAt(), request.getPlace(), request.getCapacity());
-    return SessionResponse.from(session);
+    return toSessionResponse(session);
   }
 
   public SessionResponse closeSession(Long sessionId) {
     CourseSession session = findSession(sessionId);
     session.close();
-    return SessionResponse.from(session);
+    return toSessionResponse(session);
   }
 
   private Course findCourse(Long courseId) {
@@ -84,7 +89,21 @@ public class CourseAdminService {
   }
 
   private CourseDetailResponse toDetail(Course course) {
-    return CourseDetailResponse.of(
-        course, courseSessionRepository.findByCourseIdOrderByStartAtAsc(course.getId()));
+    List<CourseSession> sessions =
+        courseSessionRepository.findByCourseIdOrderByStartAtAsc(course.getId());
+    Map<Long, Long> occupied =
+        sessions.isEmpty()
+            ? Collections.<Long, Long>emptyMap()
+            : seatCounter.occupiedSeats(
+                sessions.stream().map(CourseSession::getId).collect(Collectors.toList()));
+    return CourseDetailResponse.of(course, sessions, occupied);
+  }
+
+  private SessionResponse toSessionResponse(CourseSession session) {
+    long occupied =
+        seatCounter
+            .occupiedSeats(Collections.singleton(session.getId()))
+            .getOrDefault(session.getId(), 0L);
+    return SessionResponse.from(session, occupied);
   }
 }
