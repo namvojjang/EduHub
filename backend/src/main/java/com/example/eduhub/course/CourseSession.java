@@ -97,6 +97,28 @@ public class CourseSession {
     }
   }
 
+  /**
+   * 교육 완료 (D-01, D-05). 모집 중·모집 마감 회차가 시작 시각(같은 시각 포함)이 지났을 때만 완료로 바꾼다.
+   *
+   * <p>수료 처리는 회차가 완료된 뒤에만 할 수 있다 (D-05).
+   */
+  public void complete(LocalDateTime now) {
+    if (status == CourseSessionStatus.COMPLETED) {
+      throw new ConflictException("SESSION_ALREADY_COMPLETED", "이미 교육이 완료된 회차입니다.");
+    }
+    if (startAt.isAfter(now)) {
+      throw new ConflictException("SESSION_NOT_STARTED", "아직 시작되지 않은 회차입니다.");
+    }
+    this.status = CourseSessionStatus.COMPLETED;
+  }
+
+  /** 수료 처리 가능 여부 검사 (D-05). 교육 완료된 회차가 아니면 409. */
+  public void requireCompleted() {
+    if (status != CourseSessionStatus.COMPLETED) {
+      throw new ConflictException("SESSION_NOT_COMPLETED", "교육이 완료된 회차가 아닙니다.");
+    }
+  }
+
   private void requireRecruiting(String message) {
     if (status != CourseSessionStatus.RECRUITING) {
       throw new ConflictException("SESSION_NOT_RECRUITING", message);

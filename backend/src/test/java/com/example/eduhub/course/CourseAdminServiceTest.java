@@ -107,7 +107,7 @@ class CourseAdminServiceTest {
   @Test
   void updateSessionChangesFields() {
     CourseSession session = CourseSession.create(Course.create("A", "개발", null), START, "본사", 10);
-    given(courseSessionRepository.findById(5L)).willReturn(Optional.of(session));
+    given(courseSessionRepository.findByIdForUpdate(5L)).willReturn(Optional.of(session));
 
     SessionResponse response =
         service.updateSession(5L, new SessionRequest(START.plusDays(1), "별관", 30));
@@ -120,7 +120,7 @@ class CourseAdminServiceTest {
   @Test
   void closedSessionCannotBeUpdatedOrClosedAgain() {
     CourseSession session = CourseSession.create(Course.create("A", "개발", null), START, "본사", 10);
-    given(courseSessionRepository.findById(5L)).willReturn(Optional.of(session));
+    given(courseSessionRepository.findByIdForUpdate(5L)).willReturn(Optional.of(session));
 
     SessionResponse closed = service.closeSession(5L);
 
@@ -132,7 +132,7 @@ class CourseAdminServiceTest {
 
   @Test
   void missingSessionThrowsNotFound() {
-    given(courseSessionRepository.findById(5L)).willReturn(Optional.empty());
+    given(courseSessionRepository.findByIdForUpdate(5L)).willReturn(Optional.empty());
 
     assertThatThrownBy(() -> service.closeSession(5L))
         .isInstanceOf(CourseSessionNotFoundException.class);

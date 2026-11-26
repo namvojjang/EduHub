@@ -145,6 +145,39 @@ class EnrollmentServiceTest {
   }
 
   @Test
+  void applyToCompletedCourseIsConflict() {
+    givenSessionLocked();
+    when(enrollmentRepository.existsByCourseIdAndEmployeeIdAndStatus(
+            COURSE_ID, EMPLOYEE_ID, EnrollmentStatus.COMPLETED))
+        .thenReturn(true);
+
+    assertThatThrownBy(() -> service.apply(EMPLOYEE_ID, SESSION_ID))
+        .isInstanceOf(ConflictException.class)
+        .hasMessage("이미 수료한 과정입니다: " + COURSE_ID)
+        .satisfies(
+            e ->
+                assertThat(((ConflictException) e).getCode())
+                    .isEqualTo("ALREADY_COMPLETED_COURSE"));
+    verify(enrollmentRepository, never()).saveAndFlush(any());
+  }
+
+  @Test
+  void applyAfterNotCompletedIsAllowed() {
+    givenSessionLocked();
+    // 미수료는 COMPLETED가 아니므로 수료 확인이 false이고, 유효 신청도 없다.
+    when(enrollmentRepository.existsByCourseIdAndEmployeeIdAndStatus(
+            COURSE_ID, EMPLOYEE_ID, EnrollmentStatus.COMPLETED))
+        .thenReturn(false);
+    when(enrollmentRepository.countBySessionIdAndStatus(anyLong(), any())).thenReturn(0L);
+    givenSaveReturnsArgument();
+
+    EnrollmentResponse response = service.apply(EMPLOYEE_ID, SESSION_ID);
+
+    assertThat(response.getStatus()).isEqualTo(EnrollmentStatus.CONFIRMED);
+    assertSavedFor(EnrollmentStatus.CONFIRMED);
+  }
+
+  @Test
   void translatesConstraintNameIgnoringCaseToDuplicate() {
     givenSessionLocked();
     when(enrollmentRepository.countBySessionIdAndStatus(anyLong(), any())).thenReturn(0L);

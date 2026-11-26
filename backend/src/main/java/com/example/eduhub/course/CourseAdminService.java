@@ -73,9 +73,13 @@ public class CourseAdminService {
         .orElseThrow(() -> new CourseNotFoundException(courseId));
   }
 
+  /**
+   * 수정·마감용 회차 조회. 회차 완료·신청·취소와 같은 회차 락(비관적 락)을 잡고 읽는다(CLAUDE.md 6). CourseSession은 저장 시 모든 컬럼을
+   * 덮어쓰므로, 락 없이 읽으면 동시에 완료된 상태(COMPLETED)를 되돌릴 수 있다.
+   */
   private CourseSession findSession(Long sessionId) {
     return courseSessionRepository
-        .findById(sessionId)
+        .findByIdForUpdate(sessionId)
         .orElseThrow(() -> new CourseSessionNotFoundException(sessionId));
   }
 

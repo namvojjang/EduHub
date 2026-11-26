@@ -84,6 +84,80 @@ class EnrollmentRepositoryTest {
   }
 
   @Test
+  void completedRowBlocksNewActiveRowByUniqueIndex() {
+    Course course = newCourse();
+    CourseSession first = newSession(course);
+    CourseSession second = newSession(course);
+    Long employeeId = uniqueEmployeeId();
+    Enrollment done = enrollmentRepository.saveAndFlush(Enrollment.confirm(first, employeeId, NOW));
+    done.recordCompletion(true);
+    enrollmentRepository.saveAndFlush(done);
+
+    assertThatThrownBy(
+            () -> enrollmentRepository.saveAndFlush(Enrollment.waiting(second, employeeId, NOW)))
+        .isInstanceOf(DataIntegrityViolationException.class)
+        .satisfies(
+            e ->
+                assertThat(((DataIntegrityViolationException) e).getMostSpecificCause())
+                    .hasMessageContaining("ux_enrollment_course_employee_active"));
+  }
+
+  @Test
+  void completedRowBlocksNewConfirmedRowByUniqueIndex() {
+    Course course = newCourse();
+    CourseSession first = newSession(course);
+    CourseSession second = newSession(course);
+    Long employeeId = uniqueEmployeeId();
+    Enrollment done = enrollmentRepository.saveAndFlush(Enrollment.confirm(first, employeeId, NOW));
+    done.recordCompletion(true);
+    enrollmentRepository.saveAndFlush(done);
+
+    assertThatThrownBy(
+            () -> enrollmentRepository.saveAndFlush(Enrollment.confirm(second, employeeId, NOW)))
+        .isInstanceOf(DataIntegrityViolationException.class);
+  }
+
+  @Test
+  void notCompletedRowDoesNotBlockReEnrollment() {
+    Course course = newCourse();
+    CourseSession first = newSession(course);
+    CourseSession second = newSession(course);
+    Long employeeId = uniqueEmployeeId();
+    Enrollment failed =
+        enrollmentRepository.saveAndFlush(Enrollment.confirm(first, employeeId, NOW));
+    failed.recordCompletion(false);
+    enrollmentRepository.saveAndFlush(failed);
+
+    Enrollment again =
+        enrollmentRepository.saveAndFlush(Enrollment.confirm(second, employeeId, NOW));
+
+    assertThat(again.getId()).isNotNull();
+  }
+
+  @Test
+  void existsByCourseIdAndEmployeeIdAndStatusFindsOnlyThatStatus() {
+    Course course = newCourse();
+    Long employeeId = uniqueEmployeeId();
+    Enrollment done =
+        enrollmentRepository.saveAndFlush(Enrollment.confirm(newSession(course), employeeId, NOW));
+    done.recordCompletion(true);
+    enrollmentRepository.saveAndFlush(done);
+
+    assertThat(
+            enrollmentRepository.existsByCourseIdAndEmployeeIdAndStatus(
+                course.getId(), employeeId, EnrollmentStatus.COMPLETED))
+        .isTrue();
+    assertThat(
+            enrollmentRepository.existsByCourseIdAndEmployeeIdAndStatus(
+                course.getId(), employeeId, EnrollmentStatus.NOT_COMPLETED))
+        .isFalse();
+    assertThat(
+            enrollmentRepository.existsByCourseIdAndEmployeeIdAndStatus(
+                course.getId(), uniqueEmployeeId(), EnrollmentStatus.COMPLETED))
+        .isFalse();
+  }
+
+  @Test
   void countBySessionIdAndStatusCountsOnlyThatStatus() {
     CourseSession session = newSession(newCourse());
     enrollmentRepository.saveAndFlush(Enrollment.confirm(session, uniqueEmployeeId(), NOW));

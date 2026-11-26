@@ -79,6 +79,81 @@ class CourseSessionTest {
                 assertThat(((ConflictException) e).getCode()).isEqualTo("SESSION_ALREADY_STARTED"));
   }
 
+  @Test
+  void completeBeforeStartIsConflict() {
+    CourseSession session = newSession(NOW.plusMinutes(1));
+
+    assertThatThrownBy(() -> session.complete(NOW))
+        .isInstanceOf(ConflictException.class)
+        .satisfies(
+            e -> assertThat(((ConflictException) e).getCode()).isEqualTo("SESSION_NOT_STARTED"));
+    assertThat(session.getStatus()).isEqualTo(CourseSessionStatus.RECRUITING);
+  }
+
+  @Test
+  void completeAfterStartChangesStatus() {
+    CourseSession session = newSession(NOW.minusMinutes(1));
+
+    session.complete(NOW);
+
+    assertThat(session.getStatus()).isEqualTo(CourseSessionStatus.COMPLETED);
+  }
+
+  @Test
+  void completeAtStartTimeChangesStatus() {
+    CourseSession session = newSession(NOW);
+
+    session.complete(NOW);
+
+    assertThat(session.getStatus()).isEqualTo(CourseSessionStatus.COMPLETED);
+  }
+
+  @Test
+  void closedSessionCanBeCompleted() {
+    CourseSession session = newSession(NOW.minusDays(1));
+    session.close();
+
+    session.complete(NOW);
+
+    assertThat(session.getStatus()).isEqualTo(CourseSessionStatus.COMPLETED);
+  }
+
+  @Test
+  void completeTwiceIsConflict() {
+    CourseSession session = newSession(NOW.minusDays(1));
+    session.complete(NOW);
+
+    assertThatThrownBy(() -> session.complete(NOW))
+        .isInstanceOf(ConflictException.class)
+        .satisfies(
+            e ->
+                assertThat(((ConflictException) e).getCode())
+                    .isEqualTo("SESSION_ALREADY_COMPLETED"));
+  }
+
+  @Test
+  void requireCompletedOnCompletedSessionPasses() {
+    CourseSession session = newSession(NOW.minusDays(1));
+    session.complete(NOW);
+
+    assertThatCode(session::requireCompleted).doesNotThrowAnyException();
+  }
+
+  @Test
+  void requireCompletedOnRecruitingOrClosedSessionIsConflict() {
+    CourseSession recruiting = newSession(NOW.minusDays(1));
+    CourseSession closed = newSession(NOW.minusDays(1));
+    closed.close();
+
+    for (CourseSession session : new CourseSession[] {recruiting, closed}) {
+      assertThatThrownBy(session::requireCompleted)
+          .isInstanceOf(ConflictException.class)
+          .satisfies(
+              e ->
+                  assertThat(((ConflictException) e).getCode()).isEqualTo("SESSION_NOT_COMPLETED"));
+    }
+  }
+
   private CourseSession newSession(LocalDateTime startAt) {
     Course course = Course.create("테스트 과정", "개발", "설명");
     return CourseSession.create(course, startAt, "강의실", 10);

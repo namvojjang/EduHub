@@ -32,10 +32,34 @@ public interface EnrollmentRepository extends JpaRepository<Enrollment, Long> {
   Optional<Enrollment> findFirstBySessionIdAndStatusOrderByAppliedAtAscIdAsc(
       Long sessionId, EnrollmentStatus status);
 
+  /** FR-08 수료 처리: 회차·사원 ID 목록으로 신청을 한 번에 읽는다. */
+  List<Enrollment> findBySessionIdAndEmployeeIdIn(Long sessionId, Collection<Long> employeeIds);
+
+  /** FR-08 회차 완료 때 남은 대기 취소용. */
+  List<Enrollment> findBySessionIdAndStatus(Long sessionId, EnrollmentStatus status);
+
   long countBySessionIdAndStatus(Long sessionId, EnrollmentStatus status);
 
   boolean existsByCourseIdAndEmployeeIdAndStatusIn(
       Long courseId, Long employeeId, Collection<EnrollmentStatus> statuses);
+
+  /** D-03 수료한 과정인지 확인 (신청 사전 확인). */
+  boolean existsByCourseIdAndEmployeeIdAndStatus(
+      Long courseId, Long employeeId, EnrollmentStatus status);
+
+  /**
+   * FR-08 명단. 사번·이름은 auth.Employee를 연관관계 없이 left join(엔티티 조인)한다. 사원 행이 없는 신청도 빠지지 않는다. 엔티티를 올리지 않고
+   * 값만 읽는다. 정렬은 대기 순번 기준과 같은 (appliedAt, id).
+   */
+  @Query(
+      "select new com.example.eduhub.enrollment.RosterEntry("
+          + " e.id, e.employeeId, m.employeeNo, m.name, e.status, e.appliedAt, e.confirmedAt,"
+          + " e.promoted)"
+          + " from Enrollment e left join Employee m on m.id = e.employeeId"
+          + " where e.session.id = :sessionId and e.status in :statuses"
+          + " order by e.appliedAt, e.id")
+  List<RosterEntry> findRoster(
+      @Param("sessionId") Long sessionId, @Param("statuses") Collection<EnrollmentStatus> statuses);
 
   /** FR-07. 과정·회차·대기 순번을 SQL 한 번으로(NFR-02). 순번 기준은 countAhead와 같은 (appliedAt, id)(D-04). */
   @Query(

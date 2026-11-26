@@ -122,6 +122,47 @@ class EnrollmentTest {
   }
 
   @Test
+  void recordCompletionOnConfirmed() {
+    Enrollment enrollment = Enrollment.confirm(newSession(), EMPLOYEE_ID, NOW);
+
+    enrollment.recordCompletion(true);
+
+    assertThat(enrollment.getStatus()).isEqualTo(EnrollmentStatus.COMPLETED);
+  }
+
+  @Test
+  void recordNotCompletedOnConfirmed() {
+    Enrollment enrollment = Enrollment.confirm(newSession(), EMPLOYEE_ID, NOW);
+
+    enrollment.recordCompletion(false);
+
+    assertThat(enrollment.getStatus()).isEqualTo(EnrollmentStatus.NOT_COMPLETED);
+  }
+
+  @Test
+  void recordCompletionOnWaitingIsIllegalState() {
+    Enrollment enrollment = Enrollment.waiting(newSession(), EMPLOYEE_ID, NOW);
+
+    assertThatThrownBy(() -> enrollment.recordCompletion(true))
+        .isInstanceOf(IllegalStateException.class);
+    assertThat(enrollment.getStatus()).isEqualTo(EnrollmentStatus.WAITING);
+  }
+
+  @Test
+  void recordCompletionOnCancelledOrAlreadyRecordedIsIllegalState() {
+    Enrollment cancelled = Enrollment.confirm(newSession(), EMPLOYEE_ID, NOW);
+    cancelled.cancel();
+    Enrollment recorded = Enrollment.confirm(newSession(), EMPLOYEE_ID, NOW);
+    recorded.recordCompletion(true);
+
+    assertThatThrownBy(() -> cancelled.recordCompletion(true))
+        .isInstanceOf(IllegalStateException.class);
+    assertThatThrownBy(() -> recorded.recordCompletion(false))
+        .isInstanceOf(IllegalStateException.class);
+    assertThat(recorded.getStatus()).isEqualTo(EnrollmentStatus.COMPLETED);
+  }
+
+  @Test
   void timesAreTruncatedToMicros() {
     LocalDateTime nanos = LocalDateTime.of(2026, 1, 1, 9, 0, 0, 123456789);
     CourseSession session = newSession();

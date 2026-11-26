@@ -20,7 +20,7 @@
 
 - 도메인 패키지: `com.example.eduhub.course`, `com.example.eduhub.enrollment`, `com.example.eduhub.auth`(인증·사원). 공통 코드는 `com.example.eduhub.common`.
 - `enrollment`는 `course`를 참조할 수 있다. `course`는 `enrollment`에 의존하지 않는다.
-- `enrollment`는 `auth`의 `CurrentUser`만 참조한다. `course`는 `auth`에 의존하지 않는다.
+- `enrollment`는 `auth`의 `CurrentUser`와 `Employee`(명단 조회 읽기)만 참조한다. `course`는 `auth`에 의존하지 않는다.
 - 계층: Controller → Service → Repository. Controller에서 Repository를 직접 호출하지 않는다.
 - 서비스 계층 테스트 커버리지 70% 이상 (NFR-05).
 

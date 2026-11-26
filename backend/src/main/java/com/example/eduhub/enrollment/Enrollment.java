@@ -97,6 +97,18 @@ public class Enrollment {
     this.promoted = true;
   }
 
+  /**
+   * 수료·미수료 처리 (D-05). 확정 신청만 처리할 수 있다.
+   *
+   * <p>그 외 상태는 호출한 서비스가 걸러야 하므로 IllegalStateException이다.
+   */
+  public void recordCompletion(boolean passed) {
+    if (status != EnrollmentStatus.CONFIRMED) {
+      throw new IllegalStateException("확정 상태가 아닌 신청은 수료 처리할 수 없습니다: " + status);
+    }
+    this.status = passed ? EnrollmentStatus.COMPLETED : EnrollmentStatus.NOT_COMPLETED;
+  }
+
   // PostgreSQL TIMESTAMP는 마이크로초까지 저장한다. 메모리 값과 DB 값이 같아야 순번의 동점 비교(appliedAt =)가 맞는다.
   private static LocalDateTime truncate(LocalDateTime time) {
     return time.truncatedTo(ChronoUnit.MICROS);
