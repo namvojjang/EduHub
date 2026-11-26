@@ -34,6 +34,7 @@
 | E1002 | 이사원 | EMPLOYEE |
 | A0001 | 박관리 | ADMIN |
 
+- "내 것" 조회 API는 `/api/v1/me/...` 아래에 두고, 사원 ID는 `CurrentUser.from(jwt).getEmployeeId()`에서만 꺼낸다. 경로·쿼리·본문으로 사원 ID를 받지 않는다 (예: FR-07 `MyEnrollmentController`).
 - 컨트롤러 테스트: 요청에 `.with(TestAuth.as(employeeId, "EMPLOYEE"))`로 로그인 사용자를 지정한다.
 - `@WebMvcTest`에는 `@Import({SecurityConfig.class, SecurityErrorHandlers.class})`와 `@MockBean JwtDecoder`를 붙인다. 빠지면 Boot 기본 보안이 적용된다.
 
