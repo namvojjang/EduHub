@@ -1,29 +1,36 @@
 import type { AdminCourseSummaryResponse, CourseRequest } from '@eduhub/api-client';
 import {
+  ActionIcon,
   Alert,
-  Box,
+  Badge,
   Button,
-  Chip,
-  CircularProgress,
+  Container,
+  Group,
+  Menu,
+  Pagination,
   Paper,
+  Select,
+  Skeleton,
   Stack,
   Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TablePagination,
-  TableRow,
-  TextField,
-  Typography,
-} from '@mui/material';
+  Text,
+  TextInput,
+} from '@mantine/core';
+import { modals } from '@mantine/modals';
+import { notifications } from '@mantine/notifications';
+import { IconBooks, IconDots, IconPlus, IconSearch, IconSearchOff, IconSettings } from '@tabler/icons-react';
 import { FormEvent, useState } from 'react';
-import { Link as RouterLink } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { getErrorMessage } from '../api/errorMessage';
 import { CourseFormDialog } from '../components/CourseFormDialog';
-import { COURSE_STATUS_LABEL } from '../constants/statusLabels';
+import { EmptyState } from '../components/EmptyState';
+import { PageHeader } from '../components/PageHeader';
+import { categoryColor } from '../constants/categories';
+import { COURSE_STATUS_COLOR, COURSE_STATUS_LABEL } from '../constants/statusLabels';
 import { useAdminCourses } from '../hooks/useAdminCourses';
 import { useCourseAdminActions } from '../hooks/useCourseAdminActions';
+
+const PAGE_SIZE_OPTIONS = ['10', '20', '50'];
 
 /**
  * 관리자 과정 관리 화면 (FR-03): 등록·종료.
@@ -32,6 +39,7 @@ import { useCourseAdminActions } from '../hooks/useCourseAdminActions';
 export function AdminCourseListPage() {
   const [keywordInput, setKeywordInput] = useState('');
   const [keyword, setKeyword] = useState('');
+  // page는 훅에 넘기는 값이라 0부터. 화면의 Pagination에는 +1해서 보여 준다.
   const [page, setPage] = useState(0);
   const [size, setSize] = useState(20);
   const [reloadKey, setReloadKey] = useState(0);
@@ -52,139 +60,189 @@ export function AdminCourseListPage() {
   const handleCreate = async (body: CourseRequest) => {
     await actions.createCourse(body);
     setCreateOpen(false);
+    notifications.show({ color: 'teal', message: '과정을 등록했습니다.' });
     reload();
   };
 
-  const handleClose = async (course: AdminCourseSummaryResponse) => {
+  const closeCourse = async (course: AdminCourseSummaryResponse) => {
     if (course.id == null) return;
-    if (!window.confirm(`'${course.title}' 과정을 종료할까요? 목록에서 사라지고 새 회차를 열 수 없습니다.`)) return;
     setActionError(null);
     try {
       await actions.closeCourse(course.id);
+      notifications.show({ color: 'teal', message: '과정을 종료했습니다.' });
       reload();
     } catch (err) {
       setActionError(getErrorMessage(err));
     }
   };
 
+  // window.confirm 대신 확인 창을 띄우고, 확인하면 종료한다.
+  const confirmClose = (course: AdminCourseSummaryResponse) => {
+    modals.openConfirmModal({
+      title: '과정 종료',
+      children: (
+        <Text size="sm">{`'${course.title}' 과정을 종료할까요? 목록에서 사라지고 새 회차를 열 수 없습니다.`}</Text>
+      ),
+      labels: { confirm: '종료', cancel: '취소' },
+      confirmProps: { color: 'red' },
+      onConfirm: () => closeCourse(course),
+    });
+  };
+
   const courses = data?.content ?? [];
+  const total = data?.totalElements ?? 0;
+  const totalPages = Math.max(1, Math.ceil(total / size));
+  const from = total === 0 ? 0 : page * size + 1;
+  const to = Math.min((page + 1) * size, total);
 
   return (
-    <Box sx={{ maxWidth: 1040, mx: 'auto', p: 3 }}>
-      <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 2 }}>
-        <Typography variant="h5" component="h1">
-          과정 관리
-        </Typography>
-        <Stack direction="row" spacing={1}>
-          <Button component={RouterLink} to="/">
-            임직원 화면
-          </Button>
-          <Button variant="contained" onClick={() => setCreateOpen(true)}>
+    <Container size="xl" p={0}>
+      <PageHeader
+        breadcrumbs={[{ label: '홈', to: '/' }, { label: '과정 관리' }]}
+        title="과정 관리"
+        description="교육과정을 등록하고 종료하며, 회차는 과정별 관리 화면에서 다룹니다."
+        actions={
+          <Button leftSection={<IconPlus size={16} />} onClick={() => setCreateOpen(true)}>
             과정 등록
           </Button>
-        </Stack>
-      </Stack>
+        }
+      />
 
-      <Stack component="form" direction="row" spacing={2} sx={{ mb: 2 }} onSubmit={handleSearch}>
-        <TextField
-          label="과정명 검색"
-          size="small"
-          value={keywordInput}
-          onChange={(e) => setKeywordInput(e.target.value)}
-          sx={{ flex: 1 }}
-        />
-        <Button type="submit" variant="outlined">
-          검색
-        </Button>
-      </Stack>
+      <Paper withBorder p="md" mb="md">
+        <form onSubmit={handleSearch}>
+          <Group wrap="wrap" align="flex-end">
+            <TextInput
+              label="과정명 검색"
+              leftSection={<IconSearch size={16} />}
+              value={keywordInput}
+              onChange={(e) => setKeywordInput(e.currentTarget.value)}
+              style={{ flex: 1, minWidth: 200 }}
+            />
+            <Button type="submit" variant="default">
+              검색
+            </Button>
+          </Group>
+        </form>
+      </Paper>
 
       {error && (
-        <Alert severity="error" sx={{ mb: 2 }}>
+        <Alert color="red" mb="md">
           과정 목록을 불러오지 못했습니다. ({error.message})
         </Alert>
       )}
       {actionError && (
-        <Alert severity="error" sx={{ mb: 2 }} onClose={() => setActionError(null)}>
+        <Alert color="red" mb="md" withCloseButton onClose={() => setActionError(null)}>
           {actionError}
         </Alert>
       )}
 
-      <TableContainer component={Paper}>
-        <Table size="small" aria-label="관리자 과정 목록">
-          <TableHead>
-            <TableRow>
-              <TableCell>과정명</TableCell>
-              <TableCell sx={{ width: 120 }}>분류</TableCell>
-              <TableCell sx={{ width: 100 }}>상태</TableCell>
-              <TableCell sx={{ width: 260 }} align="right">
-                관리
-              </TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {loading ? (
-              <TableRow>
-                <TableCell colSpan={4} align="center">
-                  <CircularProgress size={28} aria-label="불러오는 중" />
-                </TableCell>
-              </TableRow>
-            ) : courses.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={4} align="center">
-                  {error ? '-' : '등록된 과정이 없습니다.'}
-                </TableCell>
-              </TableRow>
-            ) : (
-              courses.map((course) => (
-                <TableRow key={course.id}>
-                  <TableCell>{course.title}</TableCell>
-                  <TableCell>{course.category}</TableCell>
-                  <TableCell>
-                    <Chip
-                      size="small"
-                      label={course.status ? (COURSE_STATUS_LABEL[course.status] ?? course.status) : '-'}
-                      color={course.status === 'OPEN' ? 'success' : 'default'}
-                    />
-                  </TableCell>
-                  <TableCell align="right">
-                    <Stack direction="row" spacing={1} justifyContent="flex-end">
-                      <Button size="small" component={RouterLink} to={`/admin/courses/${course.id}`}>
-                        관리
-                      </Button>
-                      {course.status === 'OPEN' && (
-                        <Button
-                          size="small"
-                          color="error"
-                          disabled={actions.pending}
-                          onClick={() => handleClose(course)}
-                        >
-                          종료
-                        </Button>
+      {!loading && !error && (
+        <Text size="sm" c="dimmed" mb="xs">
+          {`전체 ${total}개`}
+        </Text>
+      )}
+
+      <Paper withBorder mb="md">
+        {loading ? (
+          <Stack role="status" aria-label="불러오는 중" aria-busy="true" gap="sm" p="md">
+            {Array.from({ length: 5 }, (_, i) => (
+              <Skeleton key={i} height={24} />
+            ))}
+          </Stack>
+        ) : courses.length === 0 ? (
+          !error &&
+          (keyword ? (
+            <EmptyState icon={<IconSearchOff size={28} />} title="조건에 맞는 과정이 없습니다." />
+          ) : (
+            <EmptyState icon={<IconBooks size={28} />} title="등록된 과정이 없습니다." />
+          ))
+        ) : (
+          <Table.ScrollContainer minWidth={560}>
+            <Table highlightOnHover verticalSpacing="sm" aria-label="관리자 과정 목록">
+              <Table.Thead>
+                <Table.Tr>
+                  <Table.Th>과정명</Table.Th>
+                  <Table.Th w={120}>분류</Table.Th>
+                  <Table.Th w={100}>상태</Table.Th>
+                  <Table.Th w={80} ta="right">
+                    관리
+                  </Table.Th>
+                </Table.Tr>
+              </Table.Thead>
+              <Table.Tbody>
+                {courses.map((course) => (
+                  <Table.Tr key={course.id}>
+                    <Table.Td>{course.title}</Table.Td>
+                    <Table.Td>
+                      <Badge variant="light" color={categoryColor(course.category)}>
+                        {course.category}
+                      </Badge>
+                    </Table.Td>
+                    <Table.Td>
+                      {course.status ? (
+                        <Badge variant="light" color={COURSE_STATUS_COLOR[course.status] ?? 'gray'}>
+                          {COURSE_STATUS_LABEL[course.status] ?? course.status}
+                        </Badge>
+                      ) : (
+                        '-'
                       )}
-                    </Stack>
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-        <TablePagination
-          component="div"
-          count={data?.totalElements ?? 0}
-          page={page}
-          rowsPerPage={size}
-          rowsPerPageOptions={[10, 20, 50]}
-          onPageChange={(_, next) => setPage(next)}
-          onRowsPerPageChange={(e) => {
-            setSize(Number(e.target.value));
-            setPage(0);
-          }}
-          labelRowsPerPage="페이지당"
-          labelDisplayedRows={({ from, to, count }) => `${from}–${to} / 전체 ${count}`}
-        />
-      </TableContainer>
+                    </Table.Td>
+                    <Table.Td ta="right">
+                      <Menu position="bottom-end" withinPortal>
+                        <Menu.Target>
+                          <ActionIcon variant="subtle" color="gray" aria-label={`${course.title} 작업`}>
+                            <IconDots size={18} />
+                          </ActionIcon>
+                        </Menu.Target>
+                        <Menu.Dropdown>
+                          {/* id가 없으면 이동할 곳이 없으므로 항목을 그리지 않는다. */}
+                          {course.id != null && (
+                            <Menu.Item
+                              component={Link}
+                              to={`/admin/courses/${course.id}`}
+                              leftSection={<IconSettings size={16} />}
+                            >
+                              관리
+                            </Menu.Item>
+                          )}
+                          {course.status === 'OPEN' && (
+                            <Menu.Item color="red" disabled={actions.pending} onClick={() => confirmClose(course)}>
+                              종료
+                            </Menu.Item>
+                          )}
+                        </Menu.Dropdown>
+                      </Menu>
+                    </Table.Td>
+                  </Table.Tr>
+                ))}
+              </Table.Tbody>
+            </Table>
+          </Table.ScrollContainer>
+        )}
+      </Paper>
+
+      <Group justify="space-between" wrap="wrap">
+        <Text size="sm" c="dimmed">
+          {`${from}–${to} / 전체 ${total}`}
+        </Text>
+        <Group wrap="wrap">
+          <Select
+            aria-label="페이지당"
+            data={PAGE_SIZE_OPTIONS}
+            value={String(size)}
+            allowDeselect={false}
+            onChange={(value) => {
+              if (!value) return;
+              setSize(Number(value));
+              setPage(0);
+            }}
+            w={90}
+          />
+          <Pagination total={totalPages} value={page + 1} onChange={(next) => setPage(next - 1)} />
+        </Group>
+      </Group>
 
       <CourseFormDialog open={createOpen} onClose={() => setCreateOpen(false)} onSubmit={handleCreate} />
-    </Box>
+    </Container>
   );
 }

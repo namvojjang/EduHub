@@ -9,3 +9,15 @@ export const SESSION_STATUS_LABEL: Record<string, string> = {
   CLOSED: '모집 마감',
   COMPLETED: '교육 완료',
 };
+
+// 상태 Badge 색 (Mantine 색 이름). 라벨과 한곳에서 관리한다.
+export const COURSE_STATUS_COLOR: Record<string, string> = {
+  OPEN: 'teal',
+  CLOSED: 'gray',
+};
+
+export const SESSION_STATUS_COLOR: Record<string, string> = {
+  RECRUITING: 'indigo',
+  CLOSED: 'gray',
+  COMPLETED: 'dark',
+};

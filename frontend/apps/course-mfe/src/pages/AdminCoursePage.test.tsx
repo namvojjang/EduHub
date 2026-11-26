@@ -1,8 +1,9 @@
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useCourseAdminActions } from '../hooks/useCourseAdminActions';
 import { useCourseDetail } from '../hooks/useCourseDetail';
+import { renderWithProviders } from '../test/render';
 import { AdminCoursePage } from './AdminCoursePage';
 
 vi.mock('../hooks/useCourseDetail', () => ({ useCourseDetail: vi.fn() }));
@@ -51,8 +52,14 @@ function detail(status: 'OPEN' | 'CLOSED') {
   };
 }
 
+// jsdom에는 레이아웃이 없어 Mantine 메뉴가 숨김 상태로 잡히므로, 메뉴 항목은 모두 hidden 옵션으로 찾는다.
+async function openMenuItem(name: string) {
+  fireEvent.click(screen.getByRole('button', { name: /회차 작업/ }));
+  return screen.findByRole('menuitem', { name, hidden: true });
+}
+
 function renderPage() {
-  return render(
+  return renderWithProviders(
     <MemoryRouter initialEntries={['/admin/courses/7']}>
       <Routes>
         <Route path="/admin/courses/:id" element={<AdminCoursePage />} />
@@ -68,15 +75,18 @@ describe('AdminCoursePage', () => {
     vi.mocked(useCourseDetail).mockReturnValue(detail('OPEN'));
   });
 
-  it('회차를 보여 주고, 모집 중인 회차만 수정·마감할 수 있다', () => {
+  it('회차를 보여 주고, 모집 중인 회차만 메뉴로 수정·마감할 수 있다', async () => {
     renderPage();
 
     expect(useCourseDetail).toHaveBeenCalledWith(7, 0);
     const rows = within(screen.getByRole('table', { name: '회차 관리 목록' })).getAllByRole('row');
     expect(rows[1]).toHaveTextContent('2030-01-06 09:00');
-    expect(within(rows[1]).getByRole('button', { name: '모집 마감' })).toBeInTheDocument();
     expect(rows[2]).toHaveTextContent('모집 마감');
-    expect(within(rows[2]).queryByRole('button', { name: '수정' })).not.toBeInTheDocument();
+    expect(within(rows[1]).getByRole('button', { name: /회차 작업/ })).toBeInTheDocument();
+    expect(within(rows[2]).queryByRole('button', { name: /회차 작업/ })).not.toBeInTheDocument();
+
+    expect(await openMenuItem('수정')).toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: '모집 마감', hidden: true })).toBeInTheDocument();
   });
 
   it('회차 추가 대화상자에서 저장하면 createSession을 부른다', async () => {
@@ -84,7 +94,7 @@ describe('AdminCoursePage', () => {
     renderPage();
 
     fireEvent.click(screen.getByRole('button', { name: '회차 추가' }));
-    const dialog = screen.getByRole('dialog');
+    const dialog = await screen.findByRole('dialog');
     fireEvent.change(within(dialog).getByLabelText(/시작 일시/), { target: { value: '2030-03-02T13:30' } });
     fireEvent.change(within(dialog).getByLabelText(/장소/), { target: { value: '본사 5층' } });
     fireEvent.change(within(dialog).getByLabelText(/정원/), { target: { value: '15' } });
@@ -104,7 +114,7 @@ describe('AdminCoursePage', () => {
     renderPage();
 
     fireEvent.click(screen.getByRole('button', { name: '회차 추가' }));
-    const dialog = screen.getByRole('dialog');
+    const dialog = await screen.findByRole('dialog');
     fireEvent.change(within(dialog).getByLabelText(/시작 일시/), { target: { value: '2030-03-02T13:30' } });
     fireEvent.change(within(dialog).getByLabelText(/장소/), { target: { value: '본사' } });
     fireEvent.change(within(dialog).getByLabelText(/정원/), { target: { value: '15' } });
@@ -114,13 +124,35 @@ describe('AdminCoursePage', () => {
   });
 
   it('모집 마감을 확인하면 closeSession을 부른다', async () => {
-    vi.spyOn(window, 'confirm').mockReturnValue(true);
     actions.closeSession.mockResolvedValue({});
     renderPage();
 
-    fireEvent.click(screen.getByRole('button', { name: '모집 마감' }));
+    fireEvent.click(await openMenuItem('모집 마감'));
+    // 확인 창의 "모집 마감" 버튼을 눌러야 호출된다.
+    fireEvent.click(await screen.findByRole('button', { name: '모집 마감' }));
 
     await waitFor(() => expect(actions.closeSession).toHaveBeenCalledWith(70));
+    expect(await screen.findByText('회차 모집을 마감했습니다.')).toBeInTheDocument();
+  });
+
+  it('확인 창에서 취소하면 closeSession을 부르지 않는다', async () => {
+    renderPage();
+
+    fireEvent.click(await openMenuItem('모집 마감'));
+    fireEvent.click(await screen.findByRole('button', { name: '취소' }));
+
+    await waitFor(() => expect(screen.queryByRole('button', { name: '취소' })).not.toBeInTheDocument());
+    expect(actions.closeSession).not.toHaveBeenCalled();
+  });
+
+  it('모집 마감이 실패하면 메시지를 보여 준다', async () => {
+    actions.closeSession.mockRejectedValue(new Error('이미 마감된 회차입니다.'));
+    renderPage();
+
+    fireEvent.click(await openMenuItem('모집 마감'));
+    fireEvent.click(await screen.findByRole('button', { name: '모집 마감' }));
+
+    expect(await screen.findByText('이미 마감된 회차입니다.')).toBeInTheDocument();
   });
 
   it('종료된 과정에서는 회차 추가 버튼이 비활성화된다', () => {

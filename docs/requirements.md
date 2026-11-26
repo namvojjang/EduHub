@@ -6,7 +6,7 @@
 
 ## 기술 스택
 - 백엔드: Java 21, Spring Boot 3, Spring Data JPA, Flyway, springdoc-openapi, PostgreSQL
-- 프론트엔드: React 18 + TypeScript, Module Federation(shell, course-mfe, enrollment-mfe), MUI, Axios
+- 프론트엔드: React 18 + TypeScript, Module Federation(shell, course-mfe, enrollment-mfe), Mantine 8.3(MUI에서 변경, 근거: `docs/design/UI-mantine.md`), Axios
 - 빌드: Gradle(Kotlin DSL), npm workspaces
 
 ## 기능 요구사항 (무엇을 하는가)
