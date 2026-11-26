@@ -1,0 +1,158 @@
+import {
+  ActionIcon,
+  AppShell,
+  Avatar,
+  Burger,
+  Group,
+  NavLink,
+  Stack,
+  Text,
+  TextInput,
+  ThemeIcon,
+  UnstyledButton,
+  useComputedColorScheme,
+  useMantineColorScheme,
+} from '@mantine/core';
+import { useDisclosure } from '@mantine/hooks';
+import { IconBooks, IconHistory, IconMoon, IconSearch, IconSettings, IconSun } from '@tabler/icons-react';
+import { useEffect, useState } from 'react';
+import type { FormEvent, ReactNode } from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+
+const NAVBAR_ID = 'app-navbar';
+
+// 단독 실행용 앱 뼈대: 헤더(로고·검색·테마·사용자) + 좌측 내비. shell이 생기면 shell로 옮긴다.
+export function AppLayout({ children }: { children: ReactNode }) {
+  const [opened, { toggle, close }] = useDisclosure();
+  const { pathname, search } = useLocation();
+  const navigate = useNavigate();
+  const { setColorScheme } = useMantineColorScheme();
+  const computed = useComputedColorScheme('light');
+
+  // 현재 URL의 keyword와 검색 입력을 맞춘다.
+  const urlKeyword = new URLSearchParams(search).get('keyword') ?? '';
+  const [keyword, setKeyword] = useState(urlKeyword);
+  useEffect(() => {
+    setKeyword(urlKeyword);
+  }, [urlKeyword]);
+
+  const handleSearch = (e: FormEvent) => {
+    e.preventDefault();
+    const trimmed = keyword.trim();
+    setKeyword(trimmed);
+    navigate(trimmed ? `/?keyword=${encodeURIComponent(trimmed)}` : '/');
+    close();
+  };
+
+  const courseActive = pathname === '/' || pathname.startsWith('/courses');
+  const adminActive = pathname.startsWith('/admin');
+
+  return (
+    <AppShell
+      header={{ height: 60 }}
+      navbar={{ width: 220, breakpoint: 'sm', collapsed: { mobile: !opened } }}
+      padding="md"
+    >
+      <AppShell.Header>
+        <Group h="100%" px="md" wrap="nowrap" justify="space-between">
+          <Group wrap="nowrap" gap="sm">
+            <Burger
+              opened={opened}
+              onClick={toggle}
+              hiddenFrom="sm"
+              size="sm"
+              aria-label={opened ? '메뉴 닫기' : '메뉴 열기'}
+              aria-expanded={opened}
+              aria-controls={NAVBAR_ID}
+            />
+            <UnstyledButton component={Link} to="/" aria-label="EduHub 홈">
+              <Group gap="xs" wrap="nowrap">
+                <ThemeIcon size="lg" variant="gradient" gradient={{ from: 'indigo', to: 'cyan' }} autoContrast>
+                  <Text fw={700} size="sm">
+                    E
+                  </Text>
+                </ThemeIcon>
+                <Text fw={700} size="lg" visibleFrom="xs">
+                  EduHub
+                </Text>
+              </Group>
+            </UnstyledButton>
+          </Group>
+
+          <form
+            onSubmit={handleSearch}
+            role="search"
+            aria-label="과정 검색"
+            style={{ flex: 1, maxWidth: 420, minWidth: 0 }}
+          >
+            <TextInput
+              placeholder="과정명으로 검색"
+              aria-label="과정명으로 검색"
+              leftSection={<IconSearch size={16} />}
+              value={keyword}
+              onChange={(e) => setKeyword(e.currentTarget.value)}
+            />
+          </form>
+
+          <Group wrap="nowrap" gap="sm">
+            <ActionIcon
+              variant="default"
+              size="lg"
+              aria-label="화면 테마 전환"
+              onClick={() => setColorScheme(computed === 'dark' ? 'light' : 'dark')}
+            >
+              {computed === 'dark' ? <IconSun size={18} /> : <IconMoon size={18} />}
+            </ActionIcon>
+            {/* TODO(NFR-03): 인증 연동 뒤 실제 사용자 이름으로 교체. 지금은 가짜 이름을 넣지 않는다. */}
+            <Group gap="xs" wrap="nowrap" visibleFrom="sm">
+              <Avatar radius="xl" size="md" color="indigo" />
+              <Stack gap={0}>
+                <Text size="sm" fw={600} lh={1.2}>
+                  임직원
+                </Text>
+                <Text size="xs" c="dimmed" lh={1.2}>
+                  로그인 연동 전
+                </Text>
+              </Stack>
+            </Group>
+          </Group>
+        </Group>
+      </AppShell.Header>
+
+      <AppShell.Navbar p="md" id={NAVBAR_ID}>
+        <Text size="xs" fw={700} c="dimmed" mb="xs">
+          학습
+        </Text>
+        <NavLink
+          component={Link}
+          to="/"
+          label="교육과정"
+          leftSection={<IconBooks size={18} />}
+          active={courseActive}
+          onClick={close}
+        />
+        <NavLink
+          label="내 신청 내역"
+          description="4주차 · FR-07"
+          leftSection={<IconHistory size={18} />}
+          disabled
+        />
+        <Text size="xs" fw={700} c="dimmed" mt="lg" mb="xs">
+          관리
+        </Text>
+        <NavLink
+          component={Link}
+          to="/admin/courses"
+          label="과정 관리"
+          leftSection={<IconSettings size={18} />}
+          active={adminActive}
+          onClick={close}
+        />
+      </AppShell.Navbar>
+
+      <AppShell.Main bg="light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-8))">
+        {children}
+      </AppShell.Main>
+    </AppShell>
+  );
+}

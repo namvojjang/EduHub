@@ -2,7 +2,16 @@
 
 프론트엔드 작업 지침. 공통 규칙은 루트 `CLAUDE.md`를 따른다.
 
-아직 코드와 빌드 설정이 없다. 명령은 설정이 추가되고 동작을 확인한 뒤에 적는다. 그 전에는 명령을 추측해서 쓰지 않는다.
+현재는 `apps/course-mfe` 단독 앱(과정 목록·상세·관리자 화면)만 있다. `shell`과 `enrollment-mfe`는 아직 없다.
+
+## 명령
+
+`frontend/`에서 실행한다. 확인하지 않은 명령은 추측해서 적지 않는다.
+
+```bash
+npm test                              # 전체 워크스페이스 테스트
+npm run build -w apps/course-mfe      # course-mfe 빌드
+```
 
 ## 구조 (NFR-07)
 
@@ -11,7 +20,14 @@
 
 ## UI
 
-- UI 컴포넌트는 MUI를 쓴다.
+- UI는 Mantine 8.3(`@mantine/core`·`hooks`·`modals`·`notifications`), 아이콘은 `@tabler/icons-react`, 글꼴은 `pretendard`(번들 포함)를 쓴다. Mantine 9는 React 19.2가 필요해 React 19 전환 때 함께 올린다.
+- 색은 테마 토큰이나 `light-dark()`만 쓴다(다크 모드 대응).
+- 화면 공통 레이아웃은 `src/layout/AppLayout.tsx`다(단독 실행용, `shell`이 생기면 옮긴다).
+
+## 테스트 작성
+
+- 컴포넌트 테스트는 `src/test/render.tsx`의 `renderWithProviders`로 렌더한다.
+- jsdom에서 Mantine 드롭다운·메뉴 항목은 `getByRole(..., { hidden: true })`가 필요할 수 있다.
 
 ## API 호출 (NFR-04)
 
