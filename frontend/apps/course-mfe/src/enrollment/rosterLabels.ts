@@ -47,11 +47,18 @@ const CONFLICT_MESSAGE: Record<string, string> = {
  * 401은 null: 인터셉터가 로그인 화면으로 보내므로 호출하는 쪽이 알림을 생략한다.
  */
 export function rosterErrorMessage(e: unknown): string | null {
-  if (axios.isAxiosError<ErrorResponse>(e) && e.response?.status === 409) {
-    const code = e.response.data?.code;
-    if (code && CONFLICT_MESSAGE[code]) return CONFLICT_MESSAGE[code];
+  if (axios.isAxiosError<ErrorResponse>(e)) {
+    const status = e.response?.status;
+    const code = e.response?.data?.code;
+    if (status === 401) return null;
+    if (status === 403) return '관리자만 처리할 수 있습니다.';
+    // 404·409의 서버 message에는 ID가 붙어 있어 쓰지 않는다.
+    if (status === 404) {
+      return code === 'SESSION_NOT_FOUND' ? '회차를 찾을 수 없습니다.' : '대상을 찾을 수 없습니다.';
+    }
+    if (status === 409 && code && CONFLICT_MESSAGE[code]) return CONFLICT_MESSAGE[code];
   }
-  return rosterLoadErrorMessage(e);
+  return getErrorMessage(e);
 }
 
 const FAILURE_LABEL: Record<string, string> = {

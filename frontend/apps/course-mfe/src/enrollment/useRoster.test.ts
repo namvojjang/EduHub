@@ -68,6 +68,24 @@ describe('useRoster', () => {
     expect(renders.filter((x) => x.id === 5 && x.data !== null)).toEqual([]);
   });
 
+  it('reloadKey가 바뀐 첫 렌더에 이미 loading이고 직전 data는 유지한다', async () => {
+    getRosterMock.mockResolvedValueOnce(result({ sessionId: 4 }));
+    const renders: { k: number; loading: boolean; data: RosterResponse | null }[] = [];
+    const { result: r, rerender } = renderHook(
+      ({ k }) => {
+        const state = useRoster(4, k);
+        renders.push({ k, loading: state.loading, data: state.data });
+        return state;
+      },
+      { initialProps: { k: 0 } },
+    );
+    await waitFor(() => expect(r.current.loading).toBe(false));
+    getRosterMock.mockReturnValueOnce(new Promise(() => {}));
+    rerender({ k: 1 });
+    const first = renders.find((x) => x.k === 1);
+    expect(first).toEqual({ k: 1, loading: true, data: { sessionId: 4 } });
+  });
+
   it('같은 sessionId의 재조회가 실패해도 직전 data는 유지하고 error를 담는다', async () => {
     getRosterMock.mockResolvedValueOnce(result({ sessionId: 4 }));
     const { result: r, rerender } = renderHook(({ k }) => useRoster(4, k), {

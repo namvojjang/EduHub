@@ -232,7 +232,7 @@ describe('RosterPage 교육 완료·수료 처리', () => {
     await waitFor(() => expect(getRosterMock).toHaveBeenCalledTimes(2));
   });
 
-  it('R3 시작 전 409 SESSION_NOT_STARTED면 문구를 보이고 다시 불러온다', async () => {
+  it('R3 시작 전 409 SESSION_NOT_STARTED면 문구를 보이고 다시 불러오지 않는다', async () => {
     getRosterMock.mockResolvedValue(rosterResult(roster));
     completeMock.mockRejectedValue(axiosError(409, { code: 'SESSION_NOT_STARTED', message: 'x' }));
     renderPage();
@@ -323,6 +323,9 @@ describe('RosterPage 교육 완료·수료 처리', () => {
     fireEvent.click(await screen.findByRole('checkbox', { name: '김사원(E1001) 선택' }));
     fireEvent.click(recordButton(1, '수료'));
     const dialog = await screen.findByRole('dialog');
+    expect(
+      within(dialog).getByText('선택한 1명을 수료로 기록합니다. 되돌릴 수 없습니다.'),
+    ).toBeInTheDocument();
     expect(recordMock).not.toHaveBeenCalled();
     fireEvent.click(within(dialog).getByRole('button', { name: '수료 처리' }));
     await waitFor(() =>
@@ -459,5 +462,70 @@ describe('RosterPage 교육 완료·수료 처리', () => {
     fireEvent.click(within(dialog).getByRole('button', { name: '교육 완료 처리' }));
     expect(await screen.findByText('서버 오류')).toBeInTheDocument();
     expect(screen.getByRole('table', { name: '확정자 명단' })).toBeInTheDocument();
+    // 표가 최신이 아닐 수 있으므로 안내하고 처리 버튼·체크박스를 막는다.
+    expect(screen.getByText(/표가 최신이 아닐 수 있습니다/)).toBeInTheDocument();
+    const pageButton = screen
+      .getAllByRole('button', { name: '교육 완료 처리', hidden: true })
+      .find((b) => !b.closest('[role="dialog"]'));
+    expect(pageButton).toBeDisabled();
+    expect(recordButton(0, '수료')).toBeDisabled();
+    expect(screen.getByRole('checkbox', { name: '김사원(E1001) 선택' })).toBeDisabled();
+  });
+
+  it('교육 완료 성공 뒤 열려 있던 두 번째 모달을 확인해도 요청하지 않는다', async () => {
+    getRosterMock.mockResolvedValueOnce(rosterResult(roster));
+    getRosterMock.mockResolvedValue(rosterResult(completedRoster));
+    completeMock.mockResolvedValue({ data: {} } as never);
+    renderPage();
+    const open = await screen.findByRole('button', { name: '교육 완료 처리' });
+    // 같은 버튼으로 모달 두 개를 연다(요청 전이라 버튼이 활성이다).
+    fireEvent.click(open);
+    await screen.findByRole('dialog');
+    fireEvent.click(open);
+    // Mantine은 쌓인 모달 중 맨 위 하나만 그린다. 두 번째 모달이 열릴 시간을 준다.
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 50));
+    });
+
+    // 맨 위(두 번째) 모달을 확인한다 → 요청 1회, 그 모달은 닫힌다.
+    fireEvent.click(
+      within(await screen.findByRole('dialog')).getByRole('button', { name: '교육 완료 처리' }),
+    );
+    await waitFor(() => expect(completeMock).toHaveBeenCalledTimes(1));
+    await screen.findByText('교육 완료로 처리했습니다.');
+    await waitFor(() => expect(getRosterMock).toHaveBeenCalledTimes(2));
+    await screen.findByText('교육 완료', { selector: '.mantine-Badge-label' });
+
+    // 아래에 깔려 있던 첫 모달이 다시 보인다. 이미 교육 완료이므로 확인해도 요청하지 않는다.
+    const first = await screen.findByRole('dialog');
+    fireEvent.click(within(first).getByRole('button', { name: '교육 완료 처리' }));
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 50));
+    });
+    expect(completeMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('언마운트 뒤에 도착한 응답은 알림을 띄우지 않는다', async () => {
+    getRosterMock.mockResolvedValue(rosterResult(roster));
+    let resolveComplete: (v: never) => void = () => {};
+    completeMock.mockReturnValue(new Promise<never>((res) => (resolveComplete = res)));
+    renderWithProviders(
+      <MemoryRouter initialEntries={['/admin/sessions/4/roster']}>
+        <Routes>
+          <Route path="/admin/sessions/:sessionId/roster" element={<RosterPage />} />
+          <Route path="/admin/courses/:id" element={<div>과정 화면</div>} />
+        </Routes>
+      </MemoryRouter>,
+    );
+    fireEvent.click(await screen.findByRole('button', { name: '교육 완료 처리' }));
+    const dialog = await screen.findByRole('dialog');
+    fireEvent.click(within(dialog).getByRole('button', { name: '교육 완료 처리' }));
+    await waitFor(() => expect(completeMock).toHaveBeenCalledTimes(1));
+
+    fireEvent.click(screen.getByRole('link', { name: '← 과정 관리로' }));
+    expect(await screen.findByText('과정 화면')).toBeInTheDocument();
+    await act(async () => resolveComplete({ data: {} } as never));
+    expect(screen.queryByText('교육 완료로 처리했습니다.')).not.toBeInTheDocument();
+    expect(getRosterMock).toHaveBeenCalledTimes(1);
   });
 });

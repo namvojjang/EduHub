@@ -68,34 +68,43 @@ export function RosterPage() {
   const [reloadKey, setReloadKey] = useState(0);
   const { data: loaded, loading, error: loadError } = useRoster(sessionId, reloadKey);
   const actions = useRosterActions();
-  // 요청 중이거나 재조회 중이면 처리 버튼을 막는다(재조회 전 화면으로 두 번째 요청을 보내지 않게).
-  const busy = actions.pending || loading;
 
   const [selected, setSelected] = useState<number[]>([]);
   const [notice, setNotice] = useState<ResultNotice | null>(null);
-
-  // 확인 모달은 닫히는 동안에도 확인 버튼이 남아 더블클릭이 onConfirm을 두 번 부를 수 있다. ref로 막는다.
-  const inFlight = useRef(false);
-  // 떠날 때 이 화면이 연 확인 모달만 닫는다(closeAll은 다른 모달까지 닫는다).
-  const modalId = useRef<string | null>(null);
-  useEffect(
-    () => () => {
-      if (modalId.current) modals.close(modalId.current);
-    },
-    [],
-  );
 
   // 잘못된 회차 ID는 요청하지 않고 "없는 회차"로 본다.
   const error = validId ? loadError : null;
   const notFound = !validId || (error !== null && isSessionNotFound(error));
   const data = notFound ? null : loaded;
   const errorMessage = error !== null && !notFound ? rosterLoadErrorMessage(error) : null;
+  // 재조회가 실패해 직전 표를 보여 주는 중이면 표가 최신이 아닐 수 있다.
+  const stale = data !== null && error !== null;
   const confirmed = data?.confirmed ?? [];
   const waiting = data?.waiting ?? [];
   const backTo =
     data?.courseId !== undefined ? `/admin/courses/${data.courseId}` : '/admin/courses';
 
   const sessionCompleted = data?.sessionStatus === 'COMPLETED';
+  // 요청 중, 재조회 중, 표가 최신이 아닐 때는 처리 버튼을 막는다(옛 화면으로 요청을 보내지 않게).
+  const busy = actions.pending || loading || stale;
+
+  // 확인 모달은 닫히는 동안에도 확인 버튼이 남아 더블클릭이 onConfirm을 두 번 부를 수 있다. ref로 막는다.
+  const inFlight = useRef(false);
+  // 모달은 열 때의 화면을 클로저로 잡고 있다. 확인 시점의 최신 상태는 ref로 본다.
+  const latest = useRef({ busy, sessionCompleted });
+  latest.current = { busy, sessionCompleted };
+  // 떠날 때 이 화면이 연 확인 모달만 닫는다(closeAll은 다른 모달까지 닫는다).
+  const modalId = useRef<string | null>(null);
+  // 언마운트 뒤에 늦게 도착한 응답은 알림·상태 변경을 하지 않는다.
+  const mounted = useRef(true);
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+      if (modalId.current) modals.close(modalId.current);
+    };
+  }, []);
+
   const selectableIds = confirmed
     .map((e) => selectableId(e, sessionCompleted))
     .filter((id): id is number => id !== null);
@@ -121,6 +130,7 @@ export function RosterPage() {
   };
 
   const handleError = (e: unknown) => {
+    if (!mounted.current) return;
     const message = rosterErrorMessage(e);
     // 401은 인터셉터가 로그인 화면으로 보내므로 알림을 띄우지 않는다.
     if (message !== null) notifications.show({ color: 'red', message });
@@ -142,6 +152,7 @@ export function RosterPage() {
     guarded(async () => {
       try {
         await actions.completeSession(sessionId);
+        if (!mounted.current) return;
         notifications.show({ color: 'teal', message: '교육 완료로 처리했습니다.' });
         reload();
       } catch (e) {
@@ -153,6 +164,7 @@ export function RosterPage() {
     guarded(async () => {
       try {
         const response = await actions.recordCompletions(sessionId, result, ids);
+        if (!mounted.current) return;
         const processed = response.processed?.length ?? 0;
         const failed = response.failed ?? [];
         const label = RESULT_LABEL[result];
@@ -190,6 +202,8 @@ export function RosterPage() {
       onConfirm: () => {
         if (confirmed) return;
         confirmed = true;
+        // 열어 둔 사이 화면이 바뀌었으면(이미 교육 완료, 재조회 중) 요청하지 않고 모달만 닫는다.
+        if (latest.current.busy || latest.current.sessionCompleted) return;
         void doCompleteSession();
       },
     });
@@ -204,13 +218,14 @@ export function RosterPage() {
     modalId.current = modals.openConfirmModal({
       title: `${label} 처리`,
       children: (
-        <Text size="sm">{`선택한 ${ids.length}명을 ${label}(으)로 기록합니다. 되돌릴 수 없습니다.`}</Text>
+        <Text size="sm">{`선택한 ${ids.length}명을 ${label}로 기록합니다. 되돌릴 수 없습니다.`}</Text>
       ),
       labels: { confirm: `${label} 처리`, cancel: '닫기' },
       confirmProps: { color: result === 'COMPLETED' ? 'indigo' : 'orange' },
       onConfirm: () => {
         if (confirmedOnce) return;
         confirmedOnce = true;
+        if (latest.current.busy || !latest.current.sessionCompleted) return;
         void doRecord(result, ids, roster);
       },
     });
@@ -257,7 +272,12 @@ export function RosterPage() {
 
         {errorMessage !== null && (
           <Alert color="red" title="명단을 불러오지 못했습니다.">
-            {errorMessage}
+            <Text size="sm">{errorMessage}</Text>
+            {stale && (
+              <Text size="sm" mt="xs">
+                표가 최신이 아닐 수 있습니다. 페이지를 새로고침해 주세요.
+              </Text>
+            )}
           </Alert>
         )}
 

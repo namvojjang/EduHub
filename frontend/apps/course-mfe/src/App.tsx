@@ -9,7 +9,7 @@ import { CourseDetailPage } from './pages/CourseDetailPage';
 import { CourseListPage } from './pages/CourseListPage';
 
 // 회차가 바뀌면 key로 화면을 새로 만든다: 선택·결과 알림·열린 모달이 이전 회차 것으로 남지 않게.
-function RosterRoute() {
+export function RosterRoute() {
   const { sessionId } = useParams();
   return <RosterPage key={sessionId} />;
 }

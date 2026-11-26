@@ -54,6 +54,23 @@ describe('rosterErrorMessage', () => {
   });
 });
 
+describe('rosterErrorMessage 403·404', () => {
+  it('처리 403은 처리 문구(조회 403 문구와 다르다)', () => {
+    const e = axiosError(403, { code: 'FORBIDDEN', message: 'x' });
+    expect(rosterErrorMessage(e)).toBe('관리자만 처리할 수 있습니다.');
+    expect(rosterLoadErrorMessage(e)).toBe('관리자만 볼 수 있습니다.');
+  });
+
+  it('404는 서버 message(ID 포함) 대신 고정 문구다', () => {
+    expect(
+      rosterErrorMessage(axiosError(404, { code: 'SESSION_NOT_FOUND', message: '회차 없음: 4' })),
+    ).toBe('회차를 찾을 수 없습니다.');
+    expect(
+      rosterErrorMessage(axiosError(404, { code: 'EMPLOYEE_NOT_FOUND', message: '사원 없음: 7' })),
+    ).toBe('대상을 찾을 수 없습니다.');
+  });
+});
+
 describe('failureReasonLabel', () => {
   it('알려진 code는 고정 문구', () => {
     expect(failureReasonLabel('NOT_ENROLLED', 'x')).toBe('신청 없음');

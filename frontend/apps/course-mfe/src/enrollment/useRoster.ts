@@ -11,6 +11,8 @@ export interface RosterState {
 interface Stored extends RosterState {
   /** 이 상태를 조회한 회차. 현재 sessionId와 다르면 다른 회차의 data라서 쓰지 않는다. */
   sessionId: number;
+  /** 마지막으로 조회를 시작한 reloadKey. 현재 값과 다르면 재조회가 막 요청된 것이다. */
+  reloadKey: number;
 }
 
 /** 요청을 보낼 수 있는 회차 ID인지(양의 정수). */
@@ -28,6 +30,7 @@ export function isValidSessionId(sessionId: number): boolean {
 export function useRoster(sessionId: number, reloadKey = 0): RosterState {
   const [stored, setStored] = useState<Stored>({
     sessionId,
+    reloadKey,
     data: null,
     loading: true,
     error: null,
@@ -38,19 +41,22 @@ export function useRoster(sessionId: number, reloadKey = 0): RosterState {
     let ignore = false;
     setStored((prev) =>
       prev.sessionId === sessionId
-        ? { ...prev, loading: true, error: null }
-        : { sessionId, data: null, loading: true, error: null },
+        ? { ...prev, reloadKey, loading: true, error: null }
+        : { sessionId, reloadKey, data: null, loading: true, error: null },
     );
 
     enrollmentAdminApi
       .getRoster(sessionId)
       .then((response) => {
-        if (!ignore) setStored({ sessionId, data: response.data, loading: false, error: null });
+        if (!ignore) {
+          setStored({ sessionId, reloadKey, data: response.data, loading: false, error: null });
+        }
       })
       .catch((e: unknown) => {
         if (ignore) return;
         setStored((prev) => ({
           sessionId,
+          reloadKey,
           data: prev.sessionId === sessionId ? prev.data : null,
           loading: false,
           error: e,
@@ -63,5 +69,9 @@ export function useRoster(sessionId: number, reloadKey = 0): RosterState {
   }, [sessionId, reloadKey]);
 
   if (stored.sessionId !== sessionId) return { data: null, loading: true, error: null };
+  // reloadKey가 바뀐 첫 렌더(effect가 loading을 켜기 전)에도 loading으로 본다. 직전 data는 유지한다.
+  if (isValidSessionId(sessionId) && stored.reloadKey !== reloadKey) {
+    return { data: stored.data, loading: true, error: null };
+  }
   return { data: stored.data, loading: stored.loading, error: stored.error };
 }
