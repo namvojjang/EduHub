@@ -1,5 +1,7 @@
-import { fireEvent, screen, waitFor, within } from '@testing-library/react';
+import { act, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { AxiosError, AxiosHeaders } from 'axios';
+import { Link, Route, Routes, useNavigate } from 'react-router-dom';
+import type { NavigateFunction } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { authApi, enrollmentApi } from '../api/clients';
 import { tokenStore } from '../api/http';
@@ -10,6 +12,13 @@ vi.mock('../api/clients', () => ({
   authApi: { login: vi.fn(), getMe: vi.fn() },
   enrollmentApi: { listMyEnrollments: vi.fn(), cancelEnrollment: vi.fn() },
 }));
+
+// 테스트에서 화면을 이동시키기 위해 navigate를 밖으로 꺼낸다.
+const navigateRef: { current: NavigateFunction | null } = { current: null };
+function NavCapture() {
+  navigateRef.current = useNavigate();
+  return null;
+}
 
 const listMock = vi.mocked(enrollmentApi.listMyEnrollments);
 const cancelMock = vi.mocked(enrollmentApi.cancelEnrollment);
@@ -164,6 +173,75 @@ describe('MyEnrollmentsPage', () => {
     const dialog = await screen.findByRole('dialog');
     fireEvent.click(within(dialog).getByRole('button', { name: '닫기' }));
     expect(cancelMock).not.toHaveBeenCalled();
+  });
+
+  it('확인 버튼을 같은 act 안에서 두 번 눌러도 취소 요청은 한 번만 나간다', async () => {
+    listMock.mockResolvedValue(listResult(rows));
+    cancelMock.mockResolvedValue({ data: {} } as never);
+    renderPage();
+    fireEvent.click(await screen.findByRole('button', { name: 'Java 기초 신청 취소' }));
+    const dialog = await screen.findByRole('dialog');
+    const confirm = within(dialog).getByRole('button', { name: '신청 취소' });
+    act(() => {
+      confirm.click();
+      confirm.click();
+    });
+    await waitFor(() => expect(cancelMock).toHaveBeenCalledTimes(1));
+  });
+
+  it('요청이 끝난 뒤(모달이 닫히는 동안) 같은 확인 버튼을 다시 눌러도 취소는 한 번만 나간다', async () => {
+    listMock.mockResolvedValue(listResult(rows));
+    cancelMock.mockResolvedValue({ data: {} } as never);
+    renderPage();
+    fireEvent.click(await screen.findByRole('button', { name: 'Java 기초 신청 취소' }));
+    const dialog = await screen.findByRole('dialog');
+    const confirm = within(dialog).getByRole('button', { name: '신청 취소' });
+    fireEvent.click(confirm);
+    await waitFor(() => expect(cancelMock).toHaveBeenCalledTimes(1));
+    await screen.findByText('신청을 취소했습니다.');
+    fireEvent.click(confirm);
+    expect(cancelMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('404로 취소가 실패하면 고정 문구를 보이고 다시 불러온다', async () => {
+    listMock.mockResolvedValue(listResult(rows));
+    const config = { headers: new AxiosHeaders() };
+    cancelMock.mockRejectedValue(
+      new AxiosError('fail', 'ERR_BAD_REQUEST', config, null, {
+        status: 404,
+        statusText: '',
+        headers: {},
+        config,
+        data: { code: 'ENROLLMENT_NOT_FOUND', message: '신청 없음: 11' },
+      }),
+    );
+    renderPage();
+    fireEvent.click(await screen.findByRole('button', { name: 'Java 기초 신청 취소' }));
+    const dialog = await screen.findByRole('dialog');
+    fireEvent.click(within(dialog).getByRole('button', { name: '신청 취소' }));
+    expect(await screen.findByText('신청을 찾을 수 없습니다.')).toBeInTheDocument();
+    await waitFor(() => expect(listMock).toHaveBeenCalledTimes(2));
+  });
+
+  it('페이지를 떠나면 열려 있던 확인 모달도 닫힌다', async () => {
+    listMock.mockResolvedValue(listResult(rows));
+    renderWithAuth(
+      <>
+        <NavCapture />
+        <Routes>
+          <Route path="/my/enrollments" element={<MyEnrollmentsPage />} />
+          <Route path="/" element={<Link to="/my/enrollments">내역</Link>} />
+        </Routes>
+      </>,
+      { route: '/my/enrollments' },
+    );
+    fireEvent.click(await screen.findByRole('button', { name: 'Java 기초 신청 취소' }));
+    await screen.findByRole('dialog');
+    // 페이지만 내리고 ModalsProvider는 남긴다: 스스로 닫지 않으면 모달이 남는다.
+    act(() => {
+      void navigateRef.current?.('/');
+    });
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
   });
 
   it('M4 빈 목록이면 안내와 교육과정 보기 링크를 보인다', async () => {

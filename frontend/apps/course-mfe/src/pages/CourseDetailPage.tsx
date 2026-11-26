@@ -127,7 +127,7 @@ export function CourseDetailPage() {
                         <EnrollButton
                           sessionId={session.id}
                           disabledReason={disabledReason(data.status, session.status)}
-                          onApplied={() => setReloadKey((k) => k + 1)}
+                          onChanged={() => setReloadKey((k) => k + 1)}
                         />
                       )
                     }

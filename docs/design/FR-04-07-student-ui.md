@@ -61,17 +61,18 @@ apps/course-mfe/src/
 
 - 401은 여기서 다루지 않는다. `http`가 토큰을 지우고 로그인 화면으로 보낸다(로그인 화면 PR)
 
-### 3-4. `enrollment/EnrollButton.tsx` (`{ sessionId, disabledReason? , onApplied? }`)
+### 3-4. `enrollment/EnrollButton.tsx` (`{ sessionId, disabledReason? , onChanged? }`)
 - 비로그인: `Button component={Link} to="/login" state={{ from: 현재 경로 }}` "로그인 후 신청" → 로그인 뒤 상세로 돌아온다
 - `disabledReason`이 있으면(모집 마감·교육 완료 회차) 비활성 버튼 + 이유 문구(지금 SessionCard의 안내 방식 유지)
-- 로그인: "신청하기" → `apply` 중에는 `loading`. 성공하면 버튼 자리에 결과 `Alert`(확정: teal "신청이 확정되었습니다." / 대기: blue "대기 N번으로 등록되었습니다.") + "내 신청 내역" 링크, 그리고 `onApplied()` 호출
+- 로그인: "신청하기" → `apply` 중에는 `loading`. 성공하면 버튼 자리에 결과 `Alert`(확정: teal "신청이 확정되었습니다." / 대기: blue "대기 N번으로 등록되었습니다.") + "내 신청 내역" 링크, 그리고 `onChanged()` 호출. 409 `SESSION_NOT_RECRUITING`으로 실패해도 호출한다(회차 상태가 낡았으므로). `DUPLICATE_ENROLLMENT`는 호출하지 않는다
 - 실패: 버튼 아래 경고 문구(3-3). 버튼은 다시 누를 수 있다
+- 분기 순서: 결과 → `disabledReason` → 비로그인 → 신청 버튼. 401은 문구를 띄우지 않는다(인터셉터가 로그인으로 보냄)
 
 ### 3-5. `CourseDetailPage` 변경
-- 회차마다 `<SessionCard … action={<EnrollButton sessionId=… disabledReason=… onApplied={reload} />} />`
+- 회차마다 `<SessionCard … action={<EnrollButton sessionId=… disabledReason=… onChanged={reload} />} />`
 - `disabledReason`: 회차 `status !== 'RECRUITING'`이면 "모집 마감" 또는 "교육 완료". 시작 시각 비교는 하지 않는다(서버가 409로 판단, 클라이언트 시계를 믿지 않음)
 - 과정이 `CLOSED`일 때: **9장 Q1**
-- `onApplied`: `useCourseDetail(id, reloadKey)`의 `reloadKey`를 올려 남은 자리를 새로 받는다. **단 EnrollButton의 결과 표시가 사라지지 않도록** 다시 불러오는 동안 화면 전체를 Skeleton으로 바꾸지 않는다(9장 Q3)
+- `onChanged`: `useCourseDetail(id, reloadKey)`의 `reloadKey`를 올려 남은 자리를 새로 받는다. **단 EnrollButton의 결과 표시가 사라지지 않도록** 다시 불러오는 동안 화면 전체를 Skeleton으로 바꾸지 않는다(9장 Q3)
 
 ### 3-6. `enrollment/useMyEnrollments.ts`
 - `useMyEnrollments(status?: MyEnrollmentStatus, reloadKey = 0)` → `{ data, loading, error }`. `useCourseDetail`과 같은 `ignore` 패턴(늦은 응답이 새 필터 결과를 덮지 않게)
@@ -99,7 +100,7 @@ apps/course-mfe/src/
 | ID | 대상 | 시나리오 |
 |---|---|---|
 | E1 | EnrollButton | 비로그인 → "로그인 후 신청" 링크가 `/login` |
-| E2 | EnrollButton | 확정 응답 → "신청이 확정되었습니다.", `apply(7)` 호출, `onApplied` 호출 |
+| E2 | EnrollButton | 확정 응답 → "신청이 확정되었습니다.", `apply(7)` 호출, `onChanged` 호출 |
 | E3 | EnrollButton | 대기 응답(`waitingNumber: 2`) → "대기 2번으로 등록되었습니다." |
 | E4 | EnrollButton | 409 `DUPLICATE_ENROLLMENT` → 안내 문구, 버튼 다시 누를 수 있음 |
 | E5 | EnrollButton | `disabledReason` → 비활성 버튼과 이유 |
@@ -129,7 +130,7 @@ apps/course-mfe/src/
 - 백엔드·생성 클라이언트 변경 없음
 
 ### 6회차 MFE 분리 때 주의
-- `CourseDetailPage`(course-mfe)가 `EnrollButton`(enrollment-mfe)을 쓴다 → 6회차에 remote 노출 컴포넌트가 된다. 그래서 props를 `sessionId`·`disabledReason`·`onApplied`로만 둔다
+- `CourseDetailPage`(course-mfe)가 `EnrollButton`(enrollment-mfe)을 쓴다 → 6회차에 remote 노출 컴포넌트가 된다. 그래서 props를 `sessionId`·`disabledReason`·`onChanged`로만 둔다
 - `enrollment/`가 쓰는 공용 것(`http`, `useAuth`, `EmptyState`, 날짜 형식)은 6회차에 공용 패키지로 간다
 
 ## 7. 위험

@@ -1,4 +1,4 @@
-import { renderHook, waitFor } from '@testing-library/react';
+import { act, renderHook, waitFor } from '@testing-library/react';
 import { AxiosError, AxiosHeaders } from 'axios';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { courseApi } from '../api/courseApi';
@@ -101,8 +101,9 @@ describe('useCourseDetail', () => {
     rerender({ key: 1 });
     await waitFor(() => expect(result.current.data).toEqual(latest));
 
-    resolveOld({ data: first } as unknown as DetailResult);
-    await Promise.resolve();
+    await act(async () => {
+      resolveOld({ data: first } as unknown as DetailResult);
+    });
     expect(result.current.data).toEqual(latest);
   });
 

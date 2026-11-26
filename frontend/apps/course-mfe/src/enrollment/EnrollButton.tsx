@@ -1,5 +1,7 @@
 import type { EnrollmentResponse } from '@eduhub/api-client';
+import type { ErrorResponse } from '@eduhub/api-client';
 import { Alert, Anchor, Button, Stack, Text } from '@mantine/core';
+import axios from 'axios';
 import { useId, useRef, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
@@ -10,12 +12,12 @@ interface EnrollButtonProps {
   sessionId: number;
   /** 있으면 신청할 수 없는 회차다. 비활성 버튼과 이유를 보여 준다. */
   disabledReason?: string;
-  /** 신청에 성공한 뒤(확정·대기 모두) 호출한다. */
-  onApplied?: () => void;
+  /** 화면의 회차 정보가 서버와 달라졌을 때 호출한다: 신청 성공(확정·대기 모두), 409 SESSION_NOT_RECRUITING. */
+  onChanged?: () => void;
 }
 
 /** 회차 하나의 신청 버튼과 결과 (FR-04, FR-05). 결과 문구는 서버 응답(status, waitingNumber)으로만 정한다. */
-export function EnrollButton({ sessionId, disabledReason, onApplied }: EnrollButtonProps) {
+export function EnrollButton({ sessionId, disabledReason, onChanged }: EnrollButtonProps) {
   const { user } = useAuth();
   const location = useLocation();
   const { pending, apply } = useEnrollmentActions();
@@ -24,19 +26,6 @@ export function EnrollButton({ sessionId, disabledReason, onApplied }: EnrollBut
   const noticeId = useId();
   // loading이 화면에 반영되기 전의 빠른 두 번째 클릭을 막는다. 그래도 가면 서버가 DUPLICATE_ENROLLMENT로 막는다.
   const inFlight = useRef(false);
-
-  if (!user) {
-    return (
-      <Button
-        component={Link}
-        to="/login"
-        state={{ from: location.pathname + location.search }}
-        variant="default"
-      >
-        로그인 후 신청
-      </Button>
-    );
-  }
 
   // 결과를 disabledReason보다 먼저 본다: 마지막 자리를 신청해 회차가 마감으로 바뀌어도 결과가 사라지지 않게.
   if (result) {
@@ -81,21 +70,38 @@ export function EnrollButton({ sessionId, disabledReason, onApplied }: EnrollBut
     );
   }
 
+  if (!user) {
+    return (
+      <Button
+        component={Link}
+        to="/login"
+        state={{ from: location.pathname + location.search }}
+        variant="default"
+      >
+        로그인 후 신청
+      </Button>
+    );
+  }
+
   const handleClick = async () => {
     if (inFlight.current) return;
     inFlight.current = true;
     setError(null);
+    let changed = false;
     try {
       const response = await apply(sessionId);
       setResult(response);
+      changed = true;
     } catch (e) {
+      // 401은 인터셉터가 로그인 화면으로 보내므로 문구를 띄우지 않는다.
       setError(enrollmentErrorMessage(e));
-      return;
+      // 이미 마감된 회차: 화면의 "모집 중"이 낡았으니 다시 불러오게 한다. 중복 신청은 해당 없음.
+      changed = axios.isAxiosError<ErrorResponse>(e) && e.response?.data?.code === 'SESSION_NOT_RECRUITING';
     } finally {
       inFlight.current = false;
     }
-    // 성공 처리 뒤에 호출한다. onApplied가 던져도 신청 실패로 표시하지 않는다.
-    onApplied?.();
+    // try/catch 밖에서 호출한다. onChanged가 던져도 신청 실패로 표시하지 않는다.
+    if (changed) onChanged?.();
   };
 
   return (

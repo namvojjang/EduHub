@@ -28,8 +28,22 @@ const CONFLICT_MESSAGE: Record<string, string> = {
   ENROLLMENT_NOT_CANCELLABLE: '취소할 수 없는 신청입니다.',
 };
 
-/** 신청·취소 실패를 화면 문구로 바꾼다. 409는 code 표, 그 밖은 getErrorMessage. */
-export function enrollmentErrorMessage(e: unknown): string {
+// 상태 코드와 상관없이 code로 고르는 문구(404). 백엔드 message에는 ID가 붙어 있어 쓰지 않는다.
+const NOT_FOUND_MESSAGE: Record<string, string> = {
+  ENROLLMENT_NOT_FOUND: '신청을 찾을 수 없습니다.',
+  SESSION_NOT_FOUND: '회차를 찾을 수 없습니다.',
+};
+
+/**
+ * 신청·취소 실패를 화면 문구로 바꾼다. 409는 code 표, 404 code는 고정 문구, 그 밖은 getErrorMessage.
+ * 401은 null: 인터셉터가 로그인 화면으로 보내므로 호출하는 쪽이 알림을 생략한다.
+ */
+export function enrollmentErrorMessage(e: unknown): string | null {
+  if (axios.isAxiosError<ErrorResponse>(e)) {
+    if (e.response?.status === 401) return null;
+    const code = e.response?.data?.code;
+    if (code && NOT_FOUND_MESSAGE[code]) return NOT_FOUND_MESSAGE[code];
+  }
   if (axios.isAxiosError<ErrorResponse>(e) && e.response?.status === 409) {
     const code = e.response.data?.code;
     if (code && CONFLICT_MESSAGE[code]) return CONFLICT_MESSAGE[code];

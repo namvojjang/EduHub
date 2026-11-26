@@ -1,4 +1,4 @@
-import { fireEvent, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, screen, waitFor } from '@testing-library/react';
 import { AxiosError, AxiosHeaders } from 'axios';
 import { Route, Routes, useLocation } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -19,7 +19,7 @@ function login() {
   tokenStore.save('tok-1', employee);
 }
 
-function renderButton(props: { disabledReason?: string; onApplied?: () => void } = {}) {
+function renderButton(props: { disabledReason?: string; onChanged?: () => void } = {}) {
   return renderWithAuth(
     <Routes>
       <Route path="/courses/:id" element={<EnrollButton sessionId={7} {...props} />} />
@@ -56,17 +56,17 @@ describe('EnrollButton', () => {
     expect(screen.queryByRole('button', { name: '신청하기' })).not.toBeInTheDocument();
   });
 
-  it('E2 확정 응답이면 확정 안내를 보이고 apply(7)와 onApplied를 호출한다', async () => {
+  it('E2 확정 응답이면 확정 안내를 보이고 apply(7)와 onChanged를 호출한다', async () => {
     login();
     applyMock.mockResolvedValue({ data: { id: 1, sessionId: 7, status: 'CONFIRMED' } } as never);
-    const onApplied = vi.fn();
-    renderButton({ onApplied });
+    const onChanged = vi.fn();
+    renderButton({ onChanged });
 
     fireEvent.click(screen.getByRole('button', { name: '신청하기' }));
 
     expect(await screen.findByText('신청이 확정되었습니다.')).toBeInTheDocument();
     expect(applyMock).toHaveBeenCalledWith({ sessionId: 7 });
-    expect(onApplied).toHaveBeenCalledTimes(1);
+    expect(onChanged).toHaveBeenCalledTimes(1);
     expect(screen.getByRole('link', { name: '내 신청 내역' })).toHaveAttribute(
       'href',
       '/my/enrollments',
@@ -125,8 +125,8 @@ describe('EnrollButton', () => {
   it('E4 409 DUPLICATE_ENROLLMENT면 고정 안내를 보이고 다시 누를 수 있다', async () => {
     login();
     applyMock.mockRejectedValue(conflict('DUPLICATE_ENROLLMENT'));
-    const onApplied = vi.fn();
-    renderButton({ onApplied });
+    const onChanged = vi.fn();
+    renderButton({ onChanged });
 
     fireEvent.click(screen.getByRole('button', { name: '신청하기' }));
 
@@ -134,11 +134,51 @@ describe('EnrollButton', () => {
       await screen.findByText('이미 이 과정에 신청했습니다. 내 신청 내역에서 확인하세요.'),
     ).toBeInTheDocument();
     expect(screen.queryByText(/: 3/)).not.toBeInTheDocument();
-    expect(onApplied).not.toHaveBeenCalled();
+    expect(onChanged).not.toHaveBeenCalled();
     await waitFor(() => expect(screen.getByRole('button', { name: '신청하기' })).toBeEnabled());
 
     fireEvent.click(screen.getByRole('button', { name: '신청하기' }));
     await waitFor(() => expect(applyMock).toHaveBeenCalledTimes(2));
+  });
+
+  it('409 SESSION_NOT_RECRUITING이면 문구를 보이고 onChanged를 호출한다', async () => {
+    login();
+    applyMock.mockRejectedValue(conflict('SESSION_NOT_RECRUITING'));
+    const onChanged = vi.fn();
+    renderButton({ onChanged });
+
+    fireEvent.click(screen.getByRole('button', { name: '신청하기' }));
+
+    expect(await screen.findByText('모집 중인 회차가 아닙니다.')).toBeInTheDocument();
+    expect(onChanged).toHaveBeenCalledTimes(1);
+  });
+
+  it('401이면 오류 문구를 띄우지 않는다', async () => {
+    login();
+    const config = { headers: new AxiosHeaders() };
+    applyMock.mockRejectedValue(
+      new AxiosError('x', 'ERR_BAD_REQUEST', config, null, {
+        status: 401,
+        statusText: '',
+        headers: {},
+        config,
+        data: { message: '인증 필요' },
+      }),
+    );
+    renderButton();
+
+    fireEvent.click(screen.getByRole('button', { name: '신청하기' }));
+
+    await waitFor(() => expect(applyMock).toHaveBeenCalled());
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+
+  it('비로그인이어도 disabledReason이 있으면 비활성 버튼과 이유를 보이고 로그인 링크는 없다', () => {
+    renderButton({ disabledReason: '모집 마감' });
+
+    expect(screen.getByRole('button', { name: '신청하기' })).toBeDisabled();
+    expect(screen.getByText('모집 마감')).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: '로그인 후 신청' })).not.toBeInTheDocument();
   });
 
   it('E5 disabledReason이 있으면 비활성 버튼과 이유를 보여 준다', () => {
@@ -158,8 +198,11 @@ describe('EnrollButton', () => {
     renderButton();
 
     const button = screen.getByRole('button', { name: '신청하기' });
-    fireEvent.click(button);
-    fireEvent.click(button);
+    // 같은 act 안에서 두 번: loading이 화면에 반영되기 전의 클릭을 흉내 낸다(ref 가드만 막을 수 있다).
+    act(() => {
+      button.click();
+      button.click();
+    });
 
     await waitFor(() => expect(button).toHaveAttribute('data-loading', 'true'));
     expect(applyMock).toHaveBeenCalledTimes(1);

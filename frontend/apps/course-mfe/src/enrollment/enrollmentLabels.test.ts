@@ -56,6 +56,17 @@ describe('enrollmentErrorMessage', () => {
     ).toBe('없음');
   });
 
+  it.each([
+    ['ENROLLMENT_NOT_FOUND', '신청을 찾을 수 없습니다.'],
+    ['SESSION_NOT_FOUND', '회차를 찾을 수 없습니다.'],
+  ])('%s는 상태 코드와 상관없이 고정 문구를 쓴다', (code, expected) => {
+    expect(enrollmentErrorMessage(httpError(404, { code, message: '없음: 9' }))).toBe(expected);
+  });
+
+  it('401은 null을 돌려준다', () => {
+    expect(enrollmentErrorMessage(httpError(401, { message: 'x' }))).toBeNull();
+  });
+
   it('Axios 오류가 아니면 일반 오류 메시지를 쓴다', () => {
     expect(enrollmentErrorMessage(new Error('Network Error'))).toBe('Network Error');
   });
