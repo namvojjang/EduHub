@@ -18,9 +18,10 @@
 
 ## 2. API (모두 ADMIN, 경로 `/api/v1/admin/...`)
 
-### 2-1. 회차 교육 완료 처리 (course 패키지, FR-03 확장)
-`POST /api/v1/admin/sessions/{sessionId}/complete` (operationId `completeSession`, Tag `CourseAdmin`) → `200 SessionResponse`
+### 2-1. 회차 교육 완료 처리 (enrollment 패키지 `EnrollmentAdminController`, 상태 규칙은 course의 `CourseSession.complete`)
+`POST /api/v1/admin/sessions/{sessionId}/complete` (operationId `completeSession`, Tag `EnrollmentAdmin`) → `200 SessionResponse`
 
+- 남은 대기 취소가 enrollment의 일이라 API는 enrollment 쪽에 둔다(5장). course는 enrollment에 의존하지 않는다.
 - 회차가 `RECRUITING` 또는 `CLOSED`이고 **시작 시각이 지났을 때만** `COMPLETED`로 바꾼다. 아니면 409
   - 이미 `COMPLETED` → 409 `SESSION_ALREADY_COMPLETED`
   - 시작 전 → 409 `SESSION_NOT_STARTED`
@@ -94,7 +95,8 @@ CREATE UNIQUE INDEX ux_enrollment_course_employee_active
     WHERE status IN ('CONFIRMED', 'WAITING', 'COMPLETED');
 ```
   - 인덱스 이름은 그대로 둔다. `EnrollmentService.isActiveEnrollmentViolation`이 이 이름으로 위반을 판별하므로 바꾸면 안 된다
-  - 서비스의 사전 확인(`existsByCourseIdAndEmployeeIdAndStatusIn`)에도 `COMPLETED`를 넣고, 수료한 과정이면 409 `ALREADY_COMPLETED_COURSE`(메시지 "이미 수료한 과정입니다")로 구분한다 → Q6
+  - 서비스의 사전 확인은 두 단계다: 회차 락 이후 ① `existsByCourseIdAndEmployeeIdAndStatus(…, COMPLETED)`이면 409 `ALREADY_COMPLETED_COURSE`("이미 수료한 과정입니다") ② 기존 `existsByCourseIdAndEmployeeIdAndStatusIn(…, CONFIRMED·WAITING)`이면 409 `DUPLICATE_ENROLLMENT` → Q6. 다른 회차와 경합하면 V6 인덱스가 최종으로 막고, 그때 코드는 `DUPLICATE_ENROLLMENT`로 나올 수 있다(둘 다 409)
+  - **회차 수정·마감도 회차 락을 쓴다**(최종 검토 W1): 회차 완료와 회차 수정이 동시에 일어나면 수정 저장이 `COMPLETED`를 덮어쓸 수 있어, `CourseAdminService`의 수정·마감 조회를 `findByIdForUpdate`로 바꿨다. 정원 변경도 이 락 아래에서 일어난다(CLAUDE.md 6)
   - 미수료(`NOT_COMPLETED`)는 다시 신청할 수 있다(D-03은 수료만 막음)
   - **마이그레이션 위험**: 기존 데이터에 같은 (과정, 사원)으로 `COMPLETED`와 유효 신청이 함께 있으면 V6가 실패한다. 지금은 `COMPLETED` 행이 없다(Step 9 조회: CANCELLED·CONFIRMED·WAITING만). 구현 시 eduhub-db로 다시 확인한다
 
@@ -134,7 +136,7 @@ CREATE UNIQUE INDEX ux_enrollment_course_employee_active
 | 항목 | 내용 |
 |---|---|
 | 새 파일 | `V6__...sql`, `RosterResponse`, `RosterEntry`, `CompletionRequest`, `CompletionResponse`, `EnrollmentAdminService`, `EnrollmentAdminController`, 테스트 3~4개 |
-| 수정 | `CourseSession`(complete, requireCompleted), `Enrollment`(recordCompletion), `EnrollmentRepository`(명단 쿼리, 회차·사원별 조회), `EnrollmentService`(D-03 사전 확인), `backend/CLAUDE.md`(패키지 규칙) |
+| 수정 | `CourseSession`(complete, requireCompleted), `Enrollment`(recordCompletion), `EnrollmentRepository`(명단 쿼리, 회차·사원별 조회), `EnrollmentService`(D-03 사전 확인), `CourseAdminService`(회차 수정·마감에 회차 락, 최종 검토 W1), `backend/CLAUDE.md`(패키지 규칙) |
 | 프론트 | 클라이언트 재생성. 화면은 Step 16 |
 | 규모 | **course·enrollment 두 패키지 + 마이그레이션 + 기존 신청 로직(D-03)**. CLAUDE.md 절차 5에 해당 → 작업을 잘게 나누고 단계마다 보고 |
 

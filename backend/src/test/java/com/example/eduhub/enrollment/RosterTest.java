@@ -6,6 +6,7 @@ import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.nullValue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -171,7 +172,7 @@ class RosterTest {
 
     System.out.println("ROSTER SQL COUNT small(4 people)=" + small + " large(10 people)=" + large);
     assertThat(large).isEqualTo(small);
-    assertThat(small).isEqualTo(4);
+    assertThat(small).isEqualTo(3);
   }
 
   private long countStatementsForRoster() throws Exception {
@@ -255,6 +256,35 @@ class RosterTest {
     complete(session.getId())
         .andExpect(status().isConflict())
         .andExpect(jsonPath("$.code").value("SESSION_ALREADY_COMPLETED"));
+  }
+
+  /** 완료된 회차는 수정·마감할 수 없고 상태가 COMPLETED로 그대로 남는다 (회차 락을 쥐고 읽는 경로). */
+  @Test
+  void updateOrCloseCompletedSessionIsConflict() throws Exception {
+    passStartTime();
+    complete(session.getId()).andExpect(status().isOk());
+
+    mockMvc
+        .perform(
+            put("/api/v1/admin/sessions/" + session.getId())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(
+                    "{\"startAt\":\""
+                        + LocalDateTime.now().plusDays(30)
+                        + "\",\"place\":\"Z실\",\"capacity\":3}")
+                .with(admin()))
+        .andExpect(status().isConflict())
+        .andExpect(jsonPath("$.code").value("SESSION_NOT_RECRUITING"));
+    mockMvc
+        .perform(post("/api/v1/admin/sessions/" + session.getId() + "/close").with(admin()))
+        .andExpect(status().isConflict())
+        .andExpect(jsonPath("$.code").value("SESSION_NOT_RECRUITING"));
+
+    em.flush();
+    em.clear();
+    CourseSession reloaded = em.find(CourseSession.class, session.getId());
+    assertThat(reloaded.getStatus().name()).isEqualTo("COMPLETED");
+    assertThat(reloaded.getCapacity()).isEqualTo(1);
   }
 
   @Test

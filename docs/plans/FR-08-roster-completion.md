@@ -55,7 +55,7 @@ T1이 엔티티 메서드와 V6를 만들고, T2·T3이 그것을 쓴다. T2와 
 - 새로: `enrollment/RosterEntry.java`, `enrollment/RosterResponse.java` (Lombok `@Value`, 설계 2-2 필드)
 - 새로: `enrollment/EnrollmentAdminService.java` (`@Service @Transactional`, 이 작업에서는 `roster(sessionId)`만, `@Transactional(readOnly = true)`)
 - 새로: `enrollment/EnrollmentAdminController.java` (`@Tag(name = "EnrollmentAdmin")`, `@RequestMapping("/api/v1/admin/sessions/{sessionId}")`, `GET /roster` operationId `getRoster`, 200·403·404 `@ApiResponse`)
-- 수정: `enrollment/EnrollmentRepository.java` — 명단 쿼리: `left join Employee m on m.id = e.employeeId`, 상태 집합 필터, `order by e.appliedAt, e.id`. 대기 순번은 같은 기준이라 대기 목록을 순서대로 1부터 매긴다(FR-05·07과 같은 `(appliedAt, id)`). JPQL 생성자 표현식으로 엔티티 로딩 없이. 확정 목록 1번 + 대기 목록 1번 + 회차 조회 = SQL 고정 개수(N+1 없음)
+- 수정: `enrollment/EnrollmentRepository.java` — 명단 쿼리: `left join Employee m on m.id = e.employeeId`, 상태 집합 필터, `order by e.appliedAt, e.id`. 대기 순번은 같은 기준이라 대기 목록을 순서대로 1부터 매긴다(FR-05·07과 같은 `(appliedAt, id)`). JPQL 생성자 표현식으로 엔티티 로딩 없이. 확정 목록 1번 + 대기 목록 1번 + 회차 조회 = SQL 고정 개수(N+1 없음). → 최종 검토 S1로 명단을 한 번 조회하고 메모리에서 나누도록 바꿈(SQL 3개, 두 쿼리 사이 승급으로 사람이 빠지는 문제 제거)
 - 수정: `auth/package-info.java`, `backend/CLAUDE.md` — 패키지 규칙 "enrollment는 auth의 `CurrentUser`와 `Employee`(명단 조회 읽기)만 참조" (설계 Q7)
 - 테스트: `RosterTest`(통합) R1·R2·R3(명단 부분), `EnrollmentAdminControllerTest`(`@WebMvcTest` + 보안 Import, 403·404 위주)
 

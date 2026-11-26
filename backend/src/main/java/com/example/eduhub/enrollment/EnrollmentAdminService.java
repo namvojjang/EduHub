@@ -22,21 +22,20 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class EnrollmentAdminService {
 
-  private static final List<EnrollmentStatus> CONFIRMED_GROUP =
+  private static final List<EnrollmentStatus> ROSTER_STATUSES =
       Collections.unmodifiableList(
           Arrays.asList(
               EnrollmentStatus.CONFIRMED,
               EnrollmentStatus.COMPLETED,
-              EnrollmentStatus.NOT_COMPLETED));
-  private static final List<EnrollmentStatus> WAITING_GROUP =
-      Collections.singletonList(EnrollmentStatus.WAITING);
+              EnrollmentStatus.NOT_COMPLETED,
+              EnrollmentStatus.WAITING));
 
   private final CourseSessionRepository courseSessionRepository;
   private final EnrollmentRepository enrollmentRepository;
 
   /**
-   * 회차 명단. 확정 목록 1번, 대기 목록 1번(신청 인원과 무관한 고정 쿼리 수, NFR-02). 대기 순번은 (appliedAt, id) 순서대로 1부터 매긴다
-   * (FR-05, FR-07과 같은 기준). 취소는 제외한다.
+   * 회차 명단. 명단 쿼리 1번(신청 인원과 무관한 고정 쿼리 수, NFR-02)으로 읽어 확정과 대기로 나눈다. 대기 순번은 (appliedAt, id) 순서대로 1부터
+   * 매긴다 (FR-05, FR-07과 같은 기준). 취소는 제외한다.
    */
   @Transactional(readOnly = true)
   public RosterResponse roster(Long sessionId) {
@@ -44,12 +43,17 @@ public class EnrollmentAdminService {
         courseSessionRepository
             .findById(sessionId)
             .orElseThrow(() -> new CourseSessionNotFoundException(sessionId));
-    List<RosterEntry> confirmed = enrollmentRepository.findRoster(sessionId, CONFIRMED_GROUP);
-    List<RosterEntry> queue = enrollmentRepository.findRoster(sessionId, WAITING_GROUP);
-    List<RosterEntry> waiting = new ArrayList<>(queue.size());
+    // 한 번에 읽어서 메모리에서 나눈다. 쿼리 두 번 사이에 승급이 끼어 한 사람이 빠지거나 겹치는 일을 막는다.
+    List<RosterEntry> all = enrollmentRepository.findRoster(sessionId, ROSTER_STATUSES);
+    List<RosterEntry> confirmed = new ArrayList<>();
+    List<RosterEntry> waiting = new ArrayList<>();
     int number = 1;
-    for (RosterEntry entry : queue) {
-      waiting.add(entry.withWaitingNumber(number++));
+    for (RosterEntry entry : all) {
+      if (entry.getStatus() == EnrollmentStatus.WAITING) {
+        waiting.add(entry.withWaitingNumber(number++));
+      } else {
+        confirmed.add(entry);
+      }
     }
     return new RosterResponse(
         session.getId(),
