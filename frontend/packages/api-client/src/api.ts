@@ -63,6 +63,77 @@ export type AdminCourseSummaryResponseStatusEnum = typeof AdminCourseSummaryResp
 /**
  * 
  * @export
+ * @interface CompletionFailure
+ */
+export interface CompletionFailure {
+    /**
+     * 
+     * @type {number}
+     * @memberof CompletionFailure
+     */
+    'employeeId'?: number;
+    /**
+     * 
+     * @type {string}
+     * @memberof CompletionFailure
+     */
+    'code'?: string;
+    /**
+     * 
+     * @type {string}
+     * @memberof CompletionFailure
+     */
+    'reason'?: string;
+}
+/**
+ * 
+ * @export
+ * @interface CompletionRequest
+ */
+export interface CompletionRequest {
+    /**
+     * 
+     * @type {string}
+     * @memberof CompletionRequest
+     */
+    'result': CompletionRequestResultEnum;
+    /**
+     * 
+     * @type {Array<number>}
+     * @memberof CompletionRequest
+     */
+    'employeeIds': Array<number>;
+}
+
+export const CompletionRequestResultEnum = {
+    Completed: 'COMPLETED',
+    NotCompleted: 'NOT_COMPLETED'
+} as const;
+
+export type CompletionRequestResultEnum = typeof CompletionRequestResultEnum[keyof typeof CompletionRequestResultEnum];
+
+/**
+ * 
+ * @export
+ * @interface CompletionResponse
+ */
+export interface CompletionResponse {
+    /**
+     * 
+     * @type {Array<number>}
+     * @memberof CompletionResponse
+     */
+    'processed'?: Array<number>;
+    /**
+     * 
+     * @type {Array<CompletionFailure>}
+     * @memberof CompletionResponse
+     */
+    'failed'?: Array<CompletionFailure>;
+}
+/**
+ * 
+ * @export
  * @interface CourseDetailResponse
  */
 export interface CourseDetailResponse {
@@ -480,6 +551,142 @@ export interface PageResponseCourseSummaryResponse {
      */
     'totalElements'?: number;
 }
+/**
+ * 
+ * @export
+ * @interface RosterEntry
+ */
+export interface RosterEntry {
+    /**
+     * 
+     * @type {number}
+     * @memberof RosterEntry
+     */
+    'enrollmentId'?: number;
+    /**
+     * 
+     * @type {number}
+     * @memberof RosterEntry
+     */
+    'employeeId'?: number;
+    /**
+     * 
+     * @type {string}
+     * @memberof RosterEntry
+     */
+    'employeeNo'?: string;
+    /**
+     * 
+     * @type {string}
+     * @memberof RosterEntry
+     */
+    'name'?: string;
+    /**
+     * 
+     * @type {string}
+     * @memberof RosterEntry
+     */
+    'status'?: RosterEntryStatusEnum;
+    /**
+     * 
+     * @type {number}
+     * @memberof RosterEntry
+     */
+    'waitingNumber'?: number;
+    /**
+     * 
+     * @type {string}
+     * @memberof RosterEntry
+     */
+    'appliedAt'?: string;
+    /**
+     * 
+     * @type {string}
+     * @memberof RosterEntry
+     */
+    'confirmedAt'?: string;
+    /**
+     * 
+     * @type {boolean}
+     * @memberof RosterEntry
+     */
+    'promoted'?: boolean;
+}
+
+export const RosterEntryStatusEnum = {
+    Confirmed: 'CONFIRMED',
+    Waiting: 'WAITING',
+    Cancelled: 'CANCELLED',
+    Completed: 'COMPLETED',
+    NotCompleted: 'NOT_COMPLETED'
+} as const;
+
+export type RosterEntryStatusEnum = typeof RosterEntryStatusEnum[keyof typeof RosterEntryStatusEnum];
+
+/**
+ * 
+ * @export
+ * @interface RosterResponse
+ */
+export interface RosterResponse {
+    /**
+     * 
+     * @type {number}
+     * @memberof RosterResponse
+     */
+    'sessionId'?: number;
+    /**
+     * 
+     * @type {number}
+     * @memberof RosterResponse
+     */
+    'courseId'?: number;
+    /**
+     * 
+     * @type {string}
+     * @memberof RosterResponse
+     */
+    'courseTitle'?: string;
+    /**
+     * 
+     * @type {string}
+     * @memberof RosterResponse
+     */
+    'sessionStartAt'?: string;
+    /**
+     * 
+     * @type {string}
+     * @memberof RosterResponse
+     */
+    'sessionStatus'?: RosterResponseSessionStatusEnum;
+    /**
+     * 
+     * @type {number}
+     * @memberof RosterResponse
+     */
+    'capacity'?: number;
+    /**
+     * 
+     * @type {Array<RosterEntry>}
+     * @memberof RosterResponse
+     */
+    'confirmed'?: Array<RosterEntry>;
+    /**
+     * 
+     * @type {Array<RosterEntry>}
+     * @memberof RosterResponse
+     */
+    'waiting'?: Array<RosterEntry>;
+}
+
+export const RosterResponseSessionStatusEnum = {
+    Recruiting: 'RECRUITING',
+    Closed: 'CLOSED',
+    Completed: 'COMPLETED'
+} as const;
+
+export type RosterResponseSessionStatusEnum = typeof RosterResponseSessionStatusEnum[keyof typeof RosterResponseSessionStatusEnum];
+
 /**
  * 
  * @export
@@ -1852,6 +2059,266 @@ export class EnrollmentApi extends BaseAPI {
      */
     public listMyEnrollments(status?: 'CONFIRMED' | 'WAITING' | 'CANCELLED' | 'COMPLETED' | 'NOT_COMPLETED', options?: AxiosRequestConfig) {
         return EnrollmentApiFp(this.configuration).listMyEnrollments(status, options).then((request) => request(this.axios, this.basePath));
+    }
+}
+
+
+/**
+ * EnrollmentAdminApi - axios parameter creator
+ * @export
+ */
+export const EnrollmentAdminApiAxiosParamCreator = function (configuration?: Configuration) {
+    return {
+        /**
+         * 
+         * @summary 회차 교육 완료 (시작 시각이 지난 회차만, 남은 대기는 취소)
+         * @param {number} sessionId 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        completeSession: async (sessionId: number, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'sessionId' is not null or undefined
+            assertParamExists('completeSession', 'sessionId', sessionId)
+            const localVarPath = `/api/v1/admin/sessions/{sessionId}/complete`
+                .replace(`{${"sessionId"}}`, encodeURIComponent(String(sessionId)));
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'POST', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+            // authentication bearerAuth required
+            // http bearer authentication required
+            await setBearerAuthToObject(localVarHeaderParameter, configuration)
+
+
+    
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+        /**
+         * 
+         * @summary 회차 명단 (확정·수료·미수료 + 대기 순번 순 대기자)
+         * @param {number} sessionId 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        getRoster: async (sessionId: number, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'sessionId' is not null or undefined
+            assertParamExists('getRoster', 'sessionId', sessionId)
+            const localVarPath = `/api/v1/admin/sessions/{sessionId}/roster`
+                .replace(`{${"sessionId"}}`, encodeURIComponent(String(sessionId)));
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'GET', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+            // authentication bearerAuth required
+            // http bearer authentication required
+            await setBearerAuthToObject(localVarHeaderParameter, configuration)
+
+
+    
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+        /**
+         * 
+         * @summary 수료·미수료 처리 (교육 완료된 회차의 확정 신청만, 안 되는 사원은 사유와 함께)
+         * @param {number} sessionId 
+         * @param {CompletionRequest} completionRequest 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        recordCompletions: async (sessionId: number, completionRequest: CompletionRequest, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'sessionId' is not null or undefined
+            assertParamExists('recordCompletions', 'sessionId', sessionId)
+            // verify required parameter 'completionRequest' is not null or undefined
+            assertParamExists('recordCompletions', 'completionRequest', completionRequest)
+            const localVarPath = `/api/v1/admin/sessions/{sessionId}/completions`
+                .replace(`{${"sessionId"}}`, encodeURIComponent(String(sessionId)));
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'POST', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+            // authentication bearerAuth required
+            // http bearer authentication required
+            await setBearerAuthToObject(localVarHeaderParameter, configuration)
+
+
+    
+            localVarHeaderParameter['Content-Type'] = 'application/json';
+
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+            localVarRequestOptions.data = serializeDataIfNeeded(completionRequest, localVarRequestOptions, configuration)
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+    }
+};
+
+/**
+ * EnrollmentAdminApi - functional programming interface
+ * @export
+ */
+export const EnrollmentAdminApiFp = function(configuration?: Configuration) {
+    const localVarAxiosParamCreator = EnrollmentAdminApiAxiosParamCreator(configuration)
+    return {
+        /**
+         * 
+         * @summary 회차 교육 완료 (시작 시각이 지난 회차만, 남은 대기는 취소)
+         * @param {number} sessionId 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async completeSession(sessionId: number, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<SessionResponse>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.completeSession(sessionId, options);
+            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+        },
+        /**
+         * 
+         * @summary 회차 명단 (확정·수료·미수료 + 대기 순번 순 대기자)
+         * @param {number} sessionId 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async getRoster(sessionId: number, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<RosterResponse>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.getRoster(sessionId, options);
+            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+        },
+        /**
+         * 
+         * @summary 수료·미수료 처리 (교육 완료된 회차의 확정 신청만, 안 되는 사원은 사유와 함께)
+         * @param {number} sessionId 
+         * @param {CompletionRequest} completionRequest 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async recordCompletions(sessionId: number, completionRequest: CompletionRequest, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<CompletionResponse>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.recordCompletions(sessionId, completionRequest, options);
+            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+        },
+    }
+};
+
+/**
+ * EnrollmentAdminApi - factory interface
+ * @export
+ */
+export const EnrollmentAdminApiFactory = function (configuration?: Configuration, basePath?: string, axios?: AxiosInstance) {
+    const localVarFp = EnrollmentAdminApiFp(configuration)
+    return {
+        /**
+         * 
+         * @summary 회차 교육 완료 (시작 시각이 지난 회차만, 남은 대기는 취소)
+         * @param {number} sessionId 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        completeSession(sessionId: number, options?: any): AxiosPromise<SessionResponse> {
+            return localVarFp.completeSession(sessionId, options).then((request) => request(axios, basePath));
+        },
+        /**
+         * 
+         * @summary 회차 명단 (확정·수료·미수료 + 대기 순번 순 대기자)
+         * @param {number} sessionId 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        getRoster(sessionId: number, options?: any): AxiosPromise<RosterResponse> {
+            return localVarFp.getRoster(sessionId, options).then((request) => request(axios, basePath));
+        },
+        /**
+         * 
+         * @summary 수료·미수료 처리 (교육 완료된 회차의 확정 신청만, 안 되는 사원은 사유와 함께)
+         * @param {number} sessionId 
+         * @param {CompletionRequest} completionRequest 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        recordCompletions(sessionId: number, completionRequest: CompletionRequest, options?: any): AxiosPromise<CompletionResponse> {
+            return localVarFp.recordCompletions(sessionId, completionRequest, options).then((request) => request(axios, basePath));
+        },
+    };
+};
+
+/**
+ * EnrollmentAdminApi - object-oriented interface
+ * @export
+ * @class EnrollmentAdminApi
+ * @extends {BaseAPI}
+ */
+export class EnrollmentAdminApi extends BaseAPI {
+    /**
+     * 
+     * @summary 회차 교육 완료 (시작 시각이 지난 회차만, 남은 대기는 취소)
+     * @param {number} sessionId 
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof EnrollmentAdminApi
+     */
+    public completeSession(sessionId: number, options?: AxiosRequestConfig) {
+        return EnrollmentAdminApiFp(this.configuration).completeSession(sessionId, options).then((request) => request(this.axios, this.basePath));
+    }
+
+    /**
+     * 
+     * @summary 회차 명단 (확정·수료·미수료 + 대기 순번 순 대기자)
+     * @param {number} sessionId 
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof EnrollmentAdminApi
+     */
+    public getRoster(sessionId: number, options?: AxiosRequestConfig) {
+        return EnrollmentAdminApiFp(this.configuration).getRoster(sessionId, options).then((request) => request(this.axios, this.basePath));
+    }
+
+    /**
+     * 
+     * @summary 수료·미수료 처리 (교육 완료된 회차의 확정 신청만, 안 되는 사원은 사유와 함께)
+     * @param {number} sessionId 
+     * @param {CompletionRequest} completionRequest 
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof EnrollmentAdminApi
+     */
+    public recordCompletions(sessionId: number, completionRequest: CompletionRequest, options?: AxiosRequestConfig) {
+        return EnrollmentAdminApiFp(this.configuration).recordCompletions(sessionId, completionRequest, options).then((request) => request(this.axios, this.basePath));
     }
 }
 
