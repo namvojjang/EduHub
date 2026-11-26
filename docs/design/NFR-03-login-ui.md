@@ -41,7 +41,9 @@ apps/course-mfe/src/
 - 생성 클라이언트는 `new XxxApi(undefined, '', http)`로 만든다(이 프로젝트의 기존 주석: `Configuration.basePath=''`는 생성 코드가 무시하므로 두 번째 인자로 넘긴다)
 
 ### 3-2. `auth/AuthContext.tsx`
-- 상태: `user: MeResponse | null`(처음 값은 `tokenStore.user()`), `expired: boolean`
+- 상태: `user: MeResponse | null`(처음 값은 `readStoredUser()`: 토큰이 없거나 `role`·`employeeId`가 없으면 저장소를 정리하고 null), `expired: boolean`
+- **다른 탭 동기화**(최종 검토 W1): `window`의 `storage` 이벤트(토큰·사용자 키 또는 clear)를 받으면 `readStoredUser()`로 다시 읽는다. 다른 탭에서 로그아웃하면 이 탭도 비로그인이 되고, 다른 사람으로 로그인하면 이 탭의 사용자도 바뀐다(화면의 사용자와 실제 요청의 사용자가 어긋나지 않게)
+- `/login` 판별은 대소문자·끝 슬래시를 무시하는 함수 하나로 한다(라우트가 대소문자를 구분하지 않으므로, 최종 검토 S1)
 - `login(employeeNo, password)`: `authApi.login` → `tokenStore.save(accessToken, user)` → `user` 설정, `expired=false`
 - `logout()`: `tokenStore.clear()`, `user=null`, `/`로 이동, 토스트 "로그아웃했습니다"
 - `eduhub:unauthorized` 수신: `expired=true`, `user=null`, `/login`으로(`state.from`=현재 경로+쿼리)
@@ -62,7 +64,7 @@ apps/course-mfe/src/
 
 ### 3-5. 레이아웃과 라우팅
 - 헤더 오른쪽: 비로그인 "로그인" 버튼 / 로그인 시 `Avatar`(이름 첫 글자) + 메뉴(이름·사번·역할, "로그아웃")
-- 좌측 내비: "교육과정" 누구나, "내 신청 내역" 로그인 시(화면은 Step 15, 지금은 비활성 유지), "과정 관리" ADMIN만
+- 좌측 내비: "교육과정" 누구나, "내 신청 내역" 누구나 보이되 비활성(화면은 Step 15에서 만들고, 그때 로그인 시에만 활성), "과정 관리" ADMIN만
 - 라우트: `/login` 추가, `/admin/courses`·`/admin/courses/:id`를 `<RequireAuth admin>`으로. `/`·`/courses/:id`는 공개(지금과 같음)
 
 ## 4. 보안 메모 (PR 본문에도 적는다)
@@ -100,6 +102,14 @@ apps/course-mfe/src/
 | 수정 | `api/courseApi.ts`, `App.tsx`, `main.tsx`, `layout/AppLayout.tsx`, `frontend/CLAUDE.md`(인증·토큰 규칙) |
 | 백엔드 | 변경 없음 |
 | 효과 | PR #7 이후 401로 막혀 있던 **관리자 화면이 로그인하면 다시 동작**한다(백엔드 설계 Q1 해소) |
+
+### 6회차 MFE 분리 때 주의 (최종 검토 S7)
+- `AuthContext`는 모듈 단위 `createContext`다. shell과 remote가 각자 번들하면 remote의 `useAuth`가 Provider를 찾지 못한다 → auth 모듈을 Module Federation `shared` 싱글톤이나 공용 패키지로 둔다
+- `http` 인스턴스는 MFE마다 하나씩 있어도 localStorage와 window 이벤트로 이어져 동작한다. 대신 `eduhub.accessToken`, `eduhub.user`, `eduhub:unauthorized`가 MFE 사이의 **계약**이 되므로 공용 패키지 상수로 옮긴다
+
+### 알려진 한계 (최종 검토, PR 본문에도 적음)
+- 공개 화면에서 만료 토큰 때문에 401이 나면 로그인 화면으로 이동한다(백엔드는 만료 토큰이 붙으면 공개 API도 401). Step 15에서 "공개 화면은 토큰만 지우고 머문다"를 다시 판단한다
+- 로그인 요청 중에 다른 화면으로 이동하면 응답 후 원래 가려던 화면으로 이동한다(영향 작음)
 
 ## 7. 위험
 - `courseApi`의 인스턴스 생성 방식 변경으로 기존 화면이 깨질 수 있음 → 기존 테스트 전체 + 브라우저 확인

@@ -28,6 +28,7 @@ import { useEffect, useState } from 'react';
 import type { FormEvent, ReactNode } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
+import { isLoginPath } from '../auth/isLoginPath';
 
 const NAVBAR_ID = 'app-navbar';
 
@@ -144,7 +145,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
                   </Menu.Item>
                 </Menu.Dropdown>
               </Menu>
-            ) : pathname !== '/login' ? (
+            ) : !isLoginPath(pathname) ? (
               // 로그인 화면에서는 이 버튼을 숨긴다(from이 /login이 되는 것을 막는다).
               <Button
                 component={Link}

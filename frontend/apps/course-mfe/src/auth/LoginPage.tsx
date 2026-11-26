@@ -6,6 +6,7 @@ import type { FormEvent } from 'react';
 import { Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { getErrorMessage } from '../api/errorMessage';
 import { useAuth } from './AuthContext';
+import { isLoginPath } from './isLoginPath';
 
 /**
  * 로그인 후 이동할 경로. 앱 안의 경로만 허용한다 (open redirect 방지).
@@ -20,7 +21,7 @@ export function safeRedirectPath(from: unknown): string {
     // eslint-disable-next-line no-control-regex
     !/[\\\u0000-\u001f]/.test(from) &&
     // 로그인 화면 자신으로 돌아가면 로그인 폼에 머문다.
-    !/^\/login(?:[/?#]|$)/.test(from)
+    !isLoginPath(from.split(/[?#]/)[0])
   ) {
     return from;
   }

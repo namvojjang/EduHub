@@ -13,6 +13,7 @@ import type { ReactNode } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { authApi } from '../api/clients';
 import { tokenStore, UNAUTHORIZED_EVENT } from '../api/http';
+import { isLoginPath } from './isLoginPath';
 
 interface AuthValue {
   user: MeResponse | null;
@@ -50,7 +51,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // 만료 안내는 로그인 화면용이다. 다른 경로로 이동하면 지운다.
   useEffect(() => {
-    if (pathname !== '/login') setExpired(false);
+    if (!isLoginPath(pathname)) setExpired(false);
   }, [pathname]);
 
   useEffect(() => {
@@ -59,13 +60,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(null);
       const { pathname: current, search: currentSearch } = locationRef.current;
       // 401이 연달아 와도 이미 로그인 화면이면 다시 이동하지 않는다.
-      if (current !== '/login') {
+      if (!isLoginPath(current)) {
         navigate('/login', { replace: true, state: { from: current + currentSearch } });
       }
     };
     window.addEventListener(UNAUTHORIZED_EVENT, onUnauthorized);
     return () => window.removeEventListener(UNAUTHORIZED_EVENT, onUnauthorized);
   }, [navigate]);
+
+  // 다른 탭의 로그인·로그아웃을 따라간다. storage 이벤트는 다른 탭의 변경에만 발생한다.
+  // 이걸 듣지 않으면 다른 탭에서 로그아웃해도 이 탭은 로그인 화면(관리자 메뉴 포함)을 유지하고,
+  // 다른 사람으로 다시 로그인하면 요청은 새 토큰으로 나가는데 화면은 옛 사용자로 남는다.
+  // 토큰이 사라지면 보호 화면은 RequireAuth가 /login으로 보내므로 navigate하지 않고,
+  // 사용자가 직접 로그아웃한 것이므로 expired도 켜지 않는다.
+  useEffect(() => {
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === null || e.key === 'eduhub.accessToken' || e.key === 'eduhub.user') {
+        setUser(readStoredUser());
+      }
+    };
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
+  }, []);
 
   // 시작 시 저장된 토큰이 아직 유효한지 서버에 확인한다. 만료면 401 → 위 이벤트가 처리한다.
   useEffect(() => {

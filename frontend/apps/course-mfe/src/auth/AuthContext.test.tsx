@@ -97,6 +97,28 @@ describe('AuthProvider', () => {
     expect(screen.getByTestId('state')).toHaveTextContent('expired=false');
   });
 
+  it('시작 시 getMe 응답 전에 토큰이 바뀌면 옛 응답으로 user와 저장소를 덮지 않는다', async () => {
+    tokenStore.save('tok-1', employee);
+    let resolveMe: (v: unknown) => void = () => {};
+    vi.mocked(authApi.getMe).mockReturnValue(
+      new Promise((resolve) => {
+        resolveMe = resolve;
+      }) as never,
+    );
+    renderWithAuth(<Probe />);
+    // 확인하는 동안 다른 탭에서 다른 사람으로 로그인했다고 가정한다.
+    tokenStore.save('tok-2', { ...employee, employeeId: 2, name: '김새로' });
+
+    await act(async () => {
+      resolveMe({ data: { ...employee, name: '옛응답' } });
+    });
+
+    expect(screen.getByTestId('state')).toHaveTextContent('user=홍길동');
+    expect(screen.getByTestId('state')).not.toHaveTextContent('옛응답');
+    expect(tokenStore.get()).toBe('tok-2');
+    expect(tokenStore.user()?.name).toBe('김새로');
+  });
+
   it('토큰이 없으면 getMe를 부르지 않는다', () => {
     renderWithAuth(<Probe />);
     expect(authApi.getMe).not.toHaveBeenCalled();

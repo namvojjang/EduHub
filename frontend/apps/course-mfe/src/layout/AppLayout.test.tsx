@@ -1,4 +1,4 @@
-import { fireEvent, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, screen, waitFor } from '@testing-library/react';
 import { Link, Route, Routes, useLocation } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { authApi } from '../api/clients';
@@ -148,6 +148,11 @@ describe('AppLayout 로그인 상태별 메뉴 (L1)', () => {
     expect(screen.queryByRole('link', { name: '로그인' })).not.toBeInTheDocument();
   });
 
+  it('/LOGIN(대문자)에서도 헤더 로그인 버튼을 숨긴다', () => {
+    renderAt('/LOGIN', null);
+    expect(screen.queryByRole('link', { name: '로그인' })).not.toBeInTheDocument();
+  });
+
   it('L1 사원: 이름(아바타 첫 글자)이 보이고 과정 관리는 없다', () => {
     renderAt('/', employee);
     expect(screen.getByRole('button', { name: '사용자 메뉴' })).toHaveTextContent('홍');
@@ -178,5 +183,38 @@ describe('AppLayout 로그인 상태별 메뉴 (L1)', () => {
     expect(await screen.findByText('로그아웃했습니다')).toBeInTheDocument();
     await waitFor(() => expect(screen.getByRole('link', { name: '로그인' })).toBeInTheDocument());
     expect(screen.queryByRole('link', { name: /과정 관리/ })).not.toBeInTheDocument();
+  });
+});
+
+describe('AppLayout 다른 탭의 로그인 변화 (W1)', () => {
+  function dispatchStorage(key: string | null) {
+    act(() => {
+      window.dispatchEvent(new StorageEvent('storage', { key }));
+    });
+  }
+
+  it('다른 탭에서 로그아웃하면 이 탭도 비로그인이 되고 과정 관리가 사라진다', () => {
+    renderAt('/', admin);
+    expect(screen.getByRole('link', { name: /과정 관리/ })).toBeInTheDocument();
+    localStorage.clear();
+    dispatchStorage('eduhub.accessToken');
+    expect(screen.queryByRole('link', { name: /과정 관리/ })).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: '로그인' })).toBeInTheDocument();
+  });
+
+  it('다른 탭에서 다른 사용자로 로그인하면 이 탭의 이름이 바뀐다', () => {
+    renderAt('/', admin);
+    expect(screen.getByRole('button', { name: '사용자 메뉴' })).toHaveTextContent('김관리');
+    tokenStore.save('tok-2', employee);
+    dispatchStorage('eduhub.user');
+    expect(screen.getByRole('button', { name: '사용자 메뉴' })).toHaveTextContent('홍길동');
+    expect(screen.queryByRole('link', { name: /과정 관리/ })).not.toBeInTheDocument();
+  });
+
+  it('관계없는 키의 storage 이벤트는 무시한다', () => {
+    renderAt('/', admin);
+    localStorage.clear();
+    dispatchStorage('other.key');
+    expect(screen.getByRole('link', { name: /과정 관리/ })).toBeInTheDocument();
   });
 });

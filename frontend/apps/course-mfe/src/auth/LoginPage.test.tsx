@@ -56,7 +56,12 @@ describe('safeRedirectPath', () => {
     [123, '/'],
     ['/login', '/'],
     ['/login?x=1', '/'],
+    ['/LOGIN', '/'],
+    ['/Login?x=1', '/'],
+    ['/login/', '/'],
     ['/loginx', '/loginx'],
+    ['/%5C/evil.com', '/%5C/evil.com'],
+    ['/%09/evil.com', '/%09/evil.com'],
     ['/\t/evil.com', '/'],
     ['/%2F%2Fevil.com', '/%2F%2Fevil.com'],
   ])('%s -> %s', (input, expected) => {
