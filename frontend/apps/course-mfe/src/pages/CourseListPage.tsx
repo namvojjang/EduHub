@@ -19,7 +19,7 @@ import { IconSearchOff } from '@tabler/icons-react';
 import { useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { CourseCard } from '../components/CourseCard';
-import { EmptyState } from '../components/EmptyState';
+import { EmptyState } from '@eduhub/ui';
 import { PageHeader } from '../components/PageHeader';
 import { CATEGORIES, categoryColor } from '../constants/categories';
 import { useCourses } from '../hooks/useCourses';
