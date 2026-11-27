@@ -1,6 +1,6 @@
 import type { MyEnrollmentResponse } from '@eduhub/api-client';
 import { useEffect, useRef, useState } from 'react';
-import { enrollmentApi } from '../api/clients';
+import { enrollmentApi } from '@eduhub/http';
 
 export type MyEnrollmentStatus =
   'CONFIRMED' | 'WAITING' | 'CANCELLED' | 'COMPLETED' | 'NOT_COMPLETED';

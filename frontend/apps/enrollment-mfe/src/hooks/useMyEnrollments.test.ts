@@ -1,11 +1,11 @@
 import type { MyEnrollmentResponse } from '@eduhub/api-client';
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { enrollmentApi } from '../api/clients';
+import { enrollmentApi } from '@eduhub/http';
 import { useMyEnrollments } from './useMyEnrollments';
 import type { MyEnrollmentStatus } from './useMyEnrollments';
 
-vi.mock('../api/clients', () => ({
+vi.mock('@eduhub/http', () => ({
   enrollmentApi: { listMyEnrollments: vi.fn() },
 }));
 

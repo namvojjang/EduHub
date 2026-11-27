@@ -1,6 +1,6 @@
 import type { CompletionResponse, SessionResponse } from '@eduhub/api-client';
 import { useCallback, useState } from 'react';
-import { enrollmentAdminApi } from '../api/clients';
+import { enrollmentAdminApi } from '@eduhub/http';
 
 /**
  * 관리자의 교육 완료·수료 기록 요청 (FR-08, D-05).

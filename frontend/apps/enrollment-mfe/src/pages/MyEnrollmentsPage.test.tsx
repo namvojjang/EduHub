@@ -3,13 +3,13 @@ import { AxiosError, AxiosHeaders } from 'axios';
 import { Link, Route, Routes, useNavigate } from 'react-router-dom';
 import type { NavigateFunction } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { authApi, enrollmentApi } from '../api/clients';
-import { tokenStore } from '../api/http';
-import { renderWithAuth } from '../test/render';
+import { enrollmentApi } from '@eduhub/http';
+import { renderWithRouter } from '../test/render';
 import { MyEnrollmentsPage } from './MyEnrollmentsPage';
 
-vi.mock('../api/clients', () => ({
-  authApi: { login: vi.fn(), getMe: vi.fn() },
+// getErrorMessage 등 나머지 export는 실제 것을 쓰고 API 객체만 대체한다.
+vi.mock('@eduhub/http', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@eduhub/http')>()),
   enrollmentApi: { listMyEnrollments: vi.fn(), cancelEnrollment: vi.fn() },
 }));
 
@@ -22,7 +22,6 @@ function NavCapture() {
 
 const listMock = vi.mocked(enrollmentApi.listMyEnrollments);
 const cancelMock = vi.mocked(enrollmentApi.cancelEnrollment);
-const employee = { employeeId: 1, employeeNo: 'E1001', name: '홍길동', role: 'EMPLOYEE' };
 
 const rows = [
   {
@@ -59,14 +58,10 @@ function listResult(data: unknown[]) {
 }
 
 function renderPage() {
-  return renderWithAuth(<MyEnrollmentsPage />, { route: '/my/enrollments' });
+  return renderWithRouter(<MyEnrollmentsPage />, { route: '/my/enrollments' });
 }
 
 beforeEach(() => {
-  localStorage.clear();
-  tokenStore.save('tok-1', employee);
-  vi.mocked(authApi.getMe).mockReset();
-  vi.mocked(authApi.getMe).mockResolvedValue({ data: employee } as never);
   listMock.mockReset();
   cancelMock.mockReset();
 });
@@ -225,7 +220,7 @@ describe('MyEnrollmentsPage', () => {
 
   it('페이지를 떠나면 열려 있던 확인 모달도 닫힌다', async () => {
     listMock.mockResolvedValue(listResult(rows));
-    renderWithAuth(
+    renderWithRouter(
       <>
         <NavCapture />
         <Routes>

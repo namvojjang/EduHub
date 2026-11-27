@@ -1,9 +1,9 @@
 import type { ErrorResponse } from '@eduhub/api-client';
 import axios from 'axios';
-import { getErrorMessage } from '../api/errorMessage';
+import { getErrorMessage } from '@eduhub/http';
 
-// 회차 상태 라벨·색. constants/statusLabels와 같은 값을 복제한다:
-// enrollment/는 constants/를 import하지 않는다(6회차 enrollment-mfe 분리, 설계 Q4).
+// 회차 상태 라벨·색. course-mfe의 constants/statusLabels와 같은 값을 복제한다:
+// remote끼리는 import하지 않으므로 course-mfe 것을 쓰지 않는다(설계 Q4, NFR-07).
 export const SESSION_STATUS_LABEL: Record<string, string> = {
   RECRUITING: '모집 중',
   CLOSED: '모집 마감',

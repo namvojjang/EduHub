@@ -2,11 +2,13 @@ import { act, fireEvent, screen, waitFor, within } from '@testing-library/react'
 import { AxiosError, AxiosHeaders } from 'axios';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { enrollmentAdminApi } from '../api/clients';
+import { enrollmentAdminApi } from '@eduhub/http';
 import { renderWithProviders } from '../test/render';
 import { RosterPage } from './RosterPage';
 
-vi.mock('../api/clients', () => ({
+// getErrorMessage 등 나머지 export는 실제 것을 쓰고 API 객체만 대체한다.
+vi.mock('@eduhub/http', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@eduhub/http')>()),
   enrollmentAdminApi: {
     getRoster: vi.fn(),
     completeSession: vi.fn(),

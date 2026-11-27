@@ -21,9 +21,8 @@ import { IconSearchOff } from '@tabler/icons-react';
 import axios from 'axios';
 import { useEffect, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { EmptyState } from '../components/EmptyState';
-import { formatDateTime } from '../components/SessionCard';
-import { ENROLLMENT_STATUS_COLOR, ENROLLMENT_STATUS_LABEL } from './enrollmentLabels';
+import { EmptyState, formatDateTime } from '@eduhub/ui';
+import { ENROLLMENT_STATUS_COLOR, ENROLLMENT_STATUS_LABEL } from '../constants/enrollmentLabels';
 import {
   SESSION_STATUS_COLOR,
   SESSION_STATUS_LABEL,
@@ -31,9 +30,9 @@ import {
   isSessionNotFound,
   rosterErrorMessage,
   rosterLoadErrorMessage,
-} from './rosterLabels';
-import { isValidSessionId, useRoster } from './useRoster';
-import { useRosterActions } from './useRosterActions';
+} from '../constants/rosterLabels';
+import { isValidSessionId, useRoster } from '../hooks/useRoster';
+import { useRosterActions } from '../hooks/useRosterActions';
 
 type CompletionResult = 'COMPLETED' | 'NOT_COMPLETED';
 

@@ -1,6 +1,6 @@
 import type { ErrorResponse } from '@eduhub/api-client';
 import axios from 'axios';
-import { getErrorMessage } from '../api/errorMessage';
+import { getErrorMessage } from '@eduhub/http';
 
 // 신청 상태 코드를 화면 문구·색으로 바꾼다 (D-05). 색은 Mantine 색 이름.
 export const ENROLLMENT_STATUS_LABEL: Record<string, string> = {
