@@ -46,6 +46,13 @@
 - `spring.jpa.open-in-view=false`를 유지한다 (NFR-02).
 - 스키마는 Flyway 마이그레이션(`src/main/resources/db/migration`)으로만 바꾼다. `ddl-auto`는 `validate`다 (NFR-06).
 
+## API 추가 (플러그인 `spring-api` 스킬의 이 저장소 값)
+
+- 기준 예시 패키지는 `com.example.eduhub.course`다(`CourseRequest`, `SessionResponse`, `CourseAdminService`, `CourseQueryService`). 같은 이름 규칙과 구조를 따른다.
+- 오류 code 예: `COURSE_NOT_FOUND`(404), `COURSE_CLOSED`(409). 공통 예외와 `GlobalExceptionHandler`는 `common/error`.
+- 페이지 응답은 `common`의 `PageResponse.from(page)`.
+- 프론트 클라이언트 재생성: 백엔드(8080)를 띄운 뒤 `cd frontend && npm run generate:api`. 생성기는 Java 8용 5.4.0 고정(`frontend/openapitools.json`), 결과는 `frontend/packages/api-client/src`(손대지 않음).
+
 ## OpenAPI 규칙 (NFR-04)
 
 - springdoc-openapi 1.x. 문서는 `/swagger-ui.html`, 스펙은 `/v3/api-docs`.
