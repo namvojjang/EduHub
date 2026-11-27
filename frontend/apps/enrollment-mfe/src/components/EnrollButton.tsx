@@ -3,14 +3,12 @@ import type { ErrorResponse } from '@eduhub/api-client';
 import { Alert, Anchor, Button, Stack, Text } from '@mantine/core';
 import axios from 'axios';
 import { useId, useRef, useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { enrollmentErrorMessage } from '../constants/enrollmentLabels';
 import { useEnrollmentActions } from '../hooks/useEnrollmentActions';
 
 interface EnrollButtonProps {
   sessionId: number;
-  /** 로그인 여부. shell이 내려 준다(remote는 로그인 상태를 직접 알지 못한다). */
-  loggedIn: boolean;
   /** 있으면 신청할 수 없는 회차다. 비활성 버튼과 이유를 보여 준다. */
   disabledReason?: string;
   /** 화면의 회차 정보가 서버와 달라졌을 때 호출한다: 신청 성공(확정·대기 모두), 409 SESSION_NOT_RECRUITING. */
@@ -18,13 +16,7 @@ interface EnrollButtonProps {
 }
 
 /** 회차 하나의 신청 버튼과 결과 (FR-04, FR-05). 결과 문구는 서버 응답(status, waitingNumber)으로만 정한다. */
-export function EnrollButton({
-  sessionId,
-  loggedIn,
-  disabledReason,
-  onChanged,
-}: EnrollButtonProps) {
-  const location = useLocation();
+export function EnrollButton({ sessionId, disabledReason, onChanged }: EnrollButtonProps) {
   const { pending, apply } = useEnrollmentActions();
   const [result, setResult] = useState<EnrollmentResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -72,19 +64,6 @@ export function EnrollButton({
           {disabledReason}
         </Text>
       </Stack>
-    );
-  }
-
-  if (!loggedIn) {
-    return (
-      <Button
-        component={Link}
-        to="/login"
-        state={{ from: location.pathname + location.search }}
-        variant="default"
-      >
-        로그인 후 신청
-      </Button>
     );
   }
 
