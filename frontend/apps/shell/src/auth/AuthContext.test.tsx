@@ -1,12 +1,14 @@
 import { act, fireEvent, screen, waitFor } from '@testing-library/react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { authApi } from '../api/clients';
-import { tokenStore, UNAUTHORIZED_EVENT } from '../api/http';
+import { authApi, tokenStore, UNAUTHORIZED_EVENT } from '@eduhub/http';
 import { renderWithAuth } from '../test/render';
 import { useAuth } from './AuthContext';
 
-vi.mock('../api/clients', () => ({ authApi: { login: vi.fn(), getMe: vi.fn() } }));
+vi.mock('@eduhub/http', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@eduhub/http')>()),
+  authApi: { login: vi.fn(), getMe: vi.fn() },
+}));
 
 const employee = { employeeId: 1, employeeNo: 'E1001', name: '홍길동', role: 'EMPLOYEE' };
 

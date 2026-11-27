@@ -4,9 +4,8 @@ import axios from 'axios';
 import { useRef, useState } from 'react';
 import type { FormEvent } from 'react';
 import { Navigate, useLocation, useNavigate } from 'react-router-dom';
-import { getErrorMessage } from '../api/errorMessage';
+import { getErrorMessage, isLoginPath } from '@eduhub/http';
 import { useAuth } from './AuthContext';
-import { isLoginPath } from './isLoginPath';
 
 /**
  * 로그인 후 이동할 경로. 앱 안의 경로만 허용한다 (open redirect 방지).

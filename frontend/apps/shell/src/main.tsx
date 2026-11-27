@@ -12,7 +12,7 @@ import { AuthProvider } from './auth/AuthContext';
 import { AppLayout } from './layout/AppLayout';
 import { theme } from './theme';
 
-// 단독 실행용 진입점. Module Federation으로 shell에 붙일 때는 App을 노출한다.
+// shell(host) 진입점. 테마·Provider·라우터·로그인 상태는 여기 한 곳에만 둔다(NFR-07). remote 화면은 App이 불러온다.
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <MantineProvider theme={theme} defaultColorScheme="light">

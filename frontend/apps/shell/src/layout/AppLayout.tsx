@@ -27,8 +27,8 @@ import {
 import { useEffect, useState } from 'react';
 import type { FormEvent, ReactNode } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { isLoginPath } from '@eduhub/http';
 import { useAuth } from '../auth/AuthContext';
-import { isLoginPath } from '../auth/isLoginPath';
 
 const NAVBAR_ID = 'app-navbar';
 

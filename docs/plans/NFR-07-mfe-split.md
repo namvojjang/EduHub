@@ -67,7 +67,9 @@ T1에서 **course-mfe와 enrollment-mfe는 빌드되지 않아도 된다**(T2·T
 - 테스트: mock `../api/clients` → `@eduhub/http`, CourseDetailPage 테스트는 슬롯으로(신청 버튼 자리 대신 가짜 노드)
 - 범위 밖: shell·enrollment-mfe·packages 수정 (필요하면 멈추고 보고)
 
-완료 명령: `npm test -w apps/course-mfe`, `npm run build -w apps/course-mfe`, `grep -rn "enrollment\|from 'shell" apps/course-mfe/src` 결과 없음
+- `SessionCard`·`AdminCoursePage`의 로컬 `formatDateTime`을 `@eduhub/ui`로 교체, `api/courseApi.ts`·`test/render.tsx`의 AuthProvider 부분 정리(T1 검토 경고 3, 제안 1)
+
+완료 명령: `npm test -w apps/course-mfe`, `npm run build -w apps/course-mfe`, `grep -rn "enrollment\|from 'shell" apps/course-mfe/src` 결과 없음, `grep -rn "function formatDateTime\|api/courseApi\|api/clients" apps/course-mfe/src` 결과 없음
 
 커밋: `refactor(course-mfe): Module Federation remote로 전환, 신청 버튼은 슬롯으로(NFR-07)`
 
@@ -75,7 +77,7 @@ T1에서 **course-mfe와 enrollment-mfe는 빌드되지 않아도 된다**(T2·T
 
 - 앱 만들기: package.json(course-mfe와 같은 버전), tsconfig, index.html, vite.config(federation remote `enrollmentMfe`, exposes `./EnrollButton`·`./MyEnrollmentsPage`·`./RosterPage`, shared 동일, 3002 strictPort, 프록시), `src/test/`
 - 폴더: `components/EnrollButton`, `pages/MyEnrollmentsPage`·`RosterPage`, 나머지(훅·라벨)는 그대로 둘 위치를 정해 보고
-- `RosterPage` 노출은 `key={sessionId}` 래퍼 포함(지금 `RosterRoute` 동작 유지)
+- `RosterPage`는 래퍼 없이 노출한다. `key={sessionId}`는 shell의 `RosterRoute`가 보장한다(T1 검토 경고 2)
 - import: `../api/*` → `@eduhub/http`, `../components/EmptyState`·`SessionCard` → `@eduhub/ui`
 - `EnrollButton`: `useAuth` 대신 prop `loggedIn`. 테스트도 prop으로
 - `main.tsx`: 단독 실행용(Provider + BrowserRouter + 내 신청 내역·명단)

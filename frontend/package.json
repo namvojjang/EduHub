@@ -7,7 +7,9 @@
   ],
   "scripts": {
     "generate:api": "npm run generate:api -w packages/api-client",
+    "dev:shell": "npm run dev -w apps/shell",
     "dev:course": "npm run dev -w apps/course-mfe",
+    "dev:enrollment": "npm run dev -w apps/enrollment-mfe",
     "test": "npm test --workspaces --if-present"
   },
   "devDependencies": {

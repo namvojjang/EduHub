@@ -11,9 +11,7 @@ import {
 } from 'react';
 import type { ReactNode } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { authApi } from '../api/clients';
-import { tokenStore, UNAUTHORIZED_EVENT } from '../api/http';
-import { isLoginPath } from './isLoginPath';
+import { authApi, isLoginPath, tokenStore, UNAUTHORIZED_EVENT } from '@eduhub/http';
 
 interface AuthValue {
   user: MeResponse | null;
