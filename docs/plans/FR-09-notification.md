@@ -22,8 +22,7 @@
 - 새로: `db/migration/V7__create_notification.sql` — 설계 4장(테이블·CHECK·FK·인덱스). `employee`·`enrollment` 실제 테이블·컬럼명은 V2·V4로 확인
 - 새로: `enrollment/ConfirmationReason.java`(APPLIED, PROMOTED), `enrollment/EnrollmentConfirmedEvent.java`(`@Value`: enrollmentId, employeeId, sessionId, courseId, courseTitle, reason)
 - 수정: `enrollment/EnrollmentService.java` — `ApplicationEventPublisher` 주입. `apply`에서 상태가 CONFIRMED로 저장된 뒤 발행(APPLIED). `promoteWaitingWhileSeatsAvailable`에서 `promote` 직후 발행(PROMOTED). 기존 락·flush 순서 유지
-- 새로: `notification/` — `package-info.java`(의존 방향 설명), `NotificationType`, `Notification`(엔티티, `confirmed(event, now)` 팩터리, 메시지 `"[과정명] 수강 신청이 확정되었습니다."`/`"[과정명] 대기에서 확정되었습니다."`, 200자 안), `NotificationRepository`, `NotificationListener`(`@TransactionalEventListener(AFTER_COMMIT)` + `@Transactional(REQUIRES_NEW)`, INFO 로그 ID만, 예외는 잡아 WARN·재던지기 없음)
-  - 주의: 예외를 잡으려면 REQUIRES_NEW 트랜잭션 **바깥**에서 잡아야 커밋 실패도 잡힌다(리스너가 별도 빈의 `@Transactional` 메서드를 부르거나 `TransactionTemplate` 사용). 구현 방식을 보고
+- 새로: `notification/` — `package-info.java`(의존 방향 설명), `NotificationType`, `Notification`(엔티티, `confirmed(event, now)` 팩터리, 메시지 `"[과정명] 수강 신청이 확정되었습니다."`/`"[과정명] 대기에서 확정되었습니다."`, 200자 안), `NotificationRepository`, `NotificationListener`(**개정**: `@TransactionalEventListener(BEFORE_COMMIT)`, 같은 트랜잭션에서 저장, 예외는 잡지 않음, INFO 로그 ID만. 최초의 AFTER_COMMIT + REQUIRES_NEW는 커넥션 풀 고갈로 폐기 — 설계 2장)
 - 수정: `backend/CLAUDE.md` 패키지 규칙 — "`notification`은 `enrollment`의 이벤트만 참조한다. `enrollment`는 `notification`을 모른다"
 - 테스트: 설계 6장 N1~N7. N4는 실제 롤백, N5는 저장 실패 시 신청 성공·커밋 확인. 기존 서비스 단위 테스트(Mockito)는 `ApplicationEventPublisher` mock 추가로 맞추고 발행 호출(인자 포함)을 검증
 
@@ -46,7 +45,7 @@
 
 | 위험 | 대응 |
 |---|---|
-| 리스너 예외가 커밋된 요청을 500으로 | 트랜잭션 바깥에서 잡기, N5 |
+| 커밋 후 새 트랜잭션의 커넥션 풀 고갈 | BEFORE_COMMIT으로 개정, 기존 동시성 테스트(N7)가 회귀 확인 |
 | 테스트가 `@Transactional` 테스트 트랜잭션 안에서 돌아 AFTER_COMMIT이 실행 안 됨 | 통합 테스트는 테스트 트랜잭션 없이(커밋되게) 실행하고 고유 데이터로 정리 |
 | 승급 경로 누락 | N3 |
 | 동시성 테스트 영향 | N7 |

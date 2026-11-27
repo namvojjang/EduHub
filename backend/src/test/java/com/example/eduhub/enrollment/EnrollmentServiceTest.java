@@ -31,6 +31,7 @@ import org.mockito.InOrder;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.test.util.ReflectionTestUtils;
 
@@ -43,6 +44,7 @@ class EnrollmentServiceTest {
 
   @Mock private CourseSessionRepository courseSessionRepository;
   @Mock private EnrollmentRepository enrollmentRepository;
+  @Mock private ApplicationEventPublisher eventPublisher;
   @InjectMocks private EnrollmentService service;
 
   private CourseSession session;
@@ -537,6 +539,101 @@ class EnrollmentServiceTest {
     assertThatThrownBy(() -> service.cancel(EMPLOYEE_ID, 100L))
         .isInstanceOf(EnrollmentNotFoundException.class);
     assertThat(others.getStatus()).isEqualTo(EnrollmentStatus.CONFIRMED);
+  }
+
+  @Test
+  void applyConfirmedPublishesAppliedEvent() {
+    givenSessionLocked();
+    when(enrollmentRepository.countBySessionIdAndStatus(SESSION_ID, EnrollmentStatus.CONFIRMED))
+        .thenReturn(1L);
+    when(enrollmentRepository.countBySessionIdAndStatus(SESSION_ID, EnrollmentStatus.WAITING))
+        .thenReturn(0L);
+    when(enrollmentRepository.saveAndFlush(any(Enrollment.class)))
+        .thenAnswer(
+            inv -> {
+              Enrollment e = inv.getArgument(0);
+              ReflectionTestUtils.setField(e, "id", 55L);
+              return e;
+            });
+
+    service.apply(EMPLOYEE_ID, SESSION_ID);
+
+    ArgumentCaptor<EnrollmentConfirmedEvent> captor =
+        ArgumentCaptor.forClass(EnrollmentConfirmedEvent.class);
+    verify(eventPublisher, times(1)).publishEvent(captor.capture());
+    EnrollmentConfirmedEvent event = captor.getValue();
+    assertThat(event.getReason()).isEqualTo(ConfirmationReason.APPLIED);
+    assertThat(event.getEnrollmentId()).isEqualTo(55L);
+    assertThat(event.getEmployeeId()).isEqualTo(EMPLOYEE_ID);
+    assertThat(event.getSessionId()).isEqualTo(SESSION_ID);
+    assertThat(event.getCourseId()).isEqualTo(COURSE_ID);
+    assertThat(event.getCourseTitle()).isEqualTo("테스트 과정");
+  }
+
+  @Test
+  void applyWaitingPublishesNoEvent() {
+    givenSessionLocked();
+    when(enrollmentRepository.countBySessionIdAndStatus(SESSION_ID, EnrollmentStatus.CONFIRMED))
+        .thenReturn(2L);
+    when(enrollmentRepository.countBySessionIdAndStatus(SESSION_ID, EnrollmentStatus.WAITING))
+        .thenReturn(0L);
+    givenSaveReturnsArgument();
+
+    service.apply(EMPLOYEE_ID, SESSION_ID);
+
+    verify(eventPublisher, never()).publishEvent(any(Object.class));
+  }
+
+  @Test
+  void applyDuplicatePublishesNoEvent() {
+    givenSessionLocked();
+    when(enrollmentRepository.existsByCourseIdAndEmployeeIdAndStatusIn(
+            eq(COURSE_ID), eq(EMPLOYEE_ID), any()))
+        .thenReturn(true);
+
+    assertThatThrownBy(() -> service.apply(EMPLOYEE_ID, SESSION_ID))
+        .isInstanceOf(DuplicateEnrollmentException.class);
+
+    verify(eventPublisher, never()).publishEvent(any(Object.class));
+  }
+
+  @Test
+  void cancelPromotionPublishesPromotedEventPerPromotion() {
+    ReflectionTestUtils.setField(session, "capacity", 4);
+    Enrollment first = enrollment(101L, 8L, EnrollmentStatus.WAITING);
+    Enrollment second = enrollment(102L, 9L, EnrollmentStatus.WAITING);
+    givenConfirmedCounts(2L, 3L, 4L);
+    when(enrollmentRepository.findFirstBySessionIdAndStatusOrderByAppliedAtAscIdAsc(
+            SESSION_ID, EnrollmentStatus.WAITING))
+        .thenReturn(Optional.of(first), Optional.of(second));
+
+    service.promoteWaitingWhileSeatsAvailable(session, LocalDateTime.now());
+
+    ArgumentCaptor<EnrollmentConfirmedEvent> captor =
+        ArgumentCaptor.forClass(EnrollmentConfirmedEvent.class);
+    verify(eventPublisher, times(2)).publishEvent(captor.capture());
+    assertThat(captor.getAllValues().get(0).getEnrollmentId()).isEqualTo(101L);
+    assertThat(captor.getAllValues().get(0).getEmployeeId()).isEqualTo(8L);
+    assertThat(captor.getAllValues().get(1).getEnrollmentId()).isEqualTo(102L);
+    for (EnrollmentConfirmedEvent event : captor.getAllValues()) {
+      assertThat(event.getReason()).isEqualTo(ConfirmationReason.PROMOTED);
+      assertThat(event.getSessionId()).isEqualTo(SESSION_ID);
+      assertThat(event.getCourseTitle()).isEqualTo("테스트 과정");
+    }
+  }
+
+  @Test
+  void cancelWithoutPromotionPublishesNoEvent() {
+    Enrollment confirmed = enrollment(100L, EMPLOYEE_ID, EnrollmentStatus.CONFIRMED);
+    givenCancelTarget(confirmed);
+    givenConfirmedCounts(1L);
+    when(enrollmentRepository.findFirstBySessionIdAndStatusOrderByAppliedAtAscIdAsc(
+            SESSION_ID, EnrollmentStatus.WAITING))
+        .thenReturn(Optional.empty());
+
+    service.cancel(EMPLOYEE_ID, 100L);
+
+    verify(eventPublisher, never()).publishEvent(any(Object.class));
   }
 
   /** 대기 상태는 팩터리로, 그 밖의 상태는 팩터리와 상태 메서드로 만든다. id는 리플렉션으로 넣는다. */

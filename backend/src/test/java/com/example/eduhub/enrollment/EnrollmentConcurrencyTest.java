@@ -61,6 +61,9 @@ class EnrollmentConcurrencyTest {
     Outcome outcome = runConcurrently(tasks);
 
     assertCounts(session, 1, 99, outcome);
+    assertThat(notificationCount(session, null))
+        .as("알림 수 = 확정 수, " + outcome.describe())
+        .isEqualTo(1);
     assertThat(outcome.success.get()).as(outcome.describe()).isEqualTo(100);
     assertThat(outcome.failures).as(outcome.describe()).isEmpty();
   }
@@ -76,6 +79,9 @@ class EnrollmentConcurrencyTest {
     Outcome outcome = runConcurrently(tasks);
 
     assertCounts(session, 5, 95, outcome);
+    assertThat(notificationCount(session, null))
+        .as("알림 수 = 확정 수, " + outcome.describe())
+        .isEqualTo(5);
     assertThat(outcome.success.get()).as(outcome.describe()).isEqualTo(100);
     assertThat(outcome.failures).as(outcome.describe()).isEmpty();
   }
@@ -293,6 +299,19 @@ class EnrollmentConcurrencyTest {
   }
 
   // ---------- 도우미 ----------
+
+  /** 회차 신청에 딸린 알림 수 (FR-09). type이 null이면 전체. */
+  private long notificationCount(CourseSession session, String type) {
+    Long count =
+        jdbcTemplate.queryForObject(
+            "select count(*) from notification n join enrollment e on e.id = n.enrollment_id"
+                + " where e.session_id = ? and (?::text is null or n.type = ?)",
+            Long.class,
+            session.getId(),
+            type,
+            type);
+    return count == null ? 0 : count;
+  }
 
   private Course newCourse() {
     return courseRepository.save(
