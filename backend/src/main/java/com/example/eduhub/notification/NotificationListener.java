@@ -15,8 +15,8 @@ import org.springframework.transaction.event.TransactionalEventListener;
  * <p>AFTER_COMMIT + REQUIRES_NEW는 원래 커넥션을 쥔 채 두 번째 커넥션을 잡아 동시 요청에서 풀이 고갈된다(설계명세 2장). 로그에는 ID만 쓴다
  * (NFR-03).
  *
- * <p>트랜잭션 밖에서 발행된 이벤트에는 실행되지 않는다(fallbackExecution 기본값 false). 승급 경로를 늘릴 때(D-02 정원 증가 등) 발행 지점이
- * 트랜잭션 안인지 확인한다.
+ * <p>트랜잭션 밖에서 발행된 이벤트에는 실행되지 않는다(fallbackExecution 기본값 false). 그래서 EnrollmentService가 발행 직전에 트랜잭션이
+ * 활성인지 확인해 아니면 바로 실패한다. 승급 경로를 늘릴 때(D-02 정원 증가 등) 발행 지점도 같은 검사를 거치게 한다.
  */
 @Slf4j
 @Component

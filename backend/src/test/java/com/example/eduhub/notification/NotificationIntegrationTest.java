@@ -58,7 +58,7 @@ class NotificationIntegrationTest {
 
     EnrollmentResponse response = enrollmentService.apply(employeeId, session.getId());
 
-    List<Map<String, Object>> rows = notificationsOf(employeeId);
+    List<Map<String, Object>> rows = notificationsOf(session, employeeId);
     assertThat(rows).hasSize(1);
     assertThat(rows.get(0).get("type")).isEqualTo("ENROLLMENT_CONFIRMED");
     assertThat(((Number) rows.get(0).get("enrollment_id")).longValue()).isEqualTo(response.getId());
@@ -74,7 +74,7 @@ class NotificationIntegrationTest {
     EnrollmentResponse response = enrollmentService.apply(waitingEmployee, session.getId());
 
     assertThat(response.getStatus()).isEqualTo(EnrollmentStatus.WAITING);
-    assertThat(notificationsOf(waitingEmployee)).isEmpty();
+    assertThat(notificationsOf(session, waitingEmployee)).isEmpty();
   }
 
   @Test
@@ -89,15 +89,15 @@ class NotificationIntegrationTest {
 
     enrollmentService.cancel(confirmedEmployee, confirmed.getId());
 
-    List<Map<String, Object>> promoted = notificationsOf(firstWaiting);
+    List<Map<String, Object>> promoted = notificationsOf(session, firstWaiting);
     assertThat(promoted).hasSize(1);
     assertThat(promoted.get(0).get("type")).isEqualTo("ENROLLMENT_PROMOTED");
     assertThat(((Number) promoted.get(0).get("enrollment_id")).longValue())
         .isEqualTo(waiting.getId());
     assertThat((String) promoted.get(0).get("message")).endsWith("대기에서 확정되었습니다.");
     // 취소한 사원은 신청 확정 알림 1건뿐이고 취소로 늘지 않는다. 다음 대기자는 0건.
-    assertThat(notificationsOf(confirmedEmployee)).hasSize(1);
-    assertThat(notificationsOf(secondWaiting)).isEmpty();
+    assertThat(notificationsOf(session, confirmedEmployee)).hasSize(1);
+    assertThat(notificationsOf(session, secondWaiting)).isEmpty();
   }
 
   /** N4: 실제 롤백을 만든다. 커밋되지 않았으므로 신청도 알림도 없어야 한다. */
@@ -116,9 +116,12 @@ class NotificationIntegrationTest {
 
     Long enrollments =
         jdbcTemplate.queryForObject(
-            "select count(*) from enrollment where employee_id = ?", Long.class, employeeId);
+            "select count(*) from enrollment where session_id = ? and employee_id = ?",
+            Long.class,
+            session.getId(),
+            employeeId);
     assertThat(enrollments).isEqualTo(0L);
-    assertThat(notificationsOf(employeeId)).isEmpty();
+    assertThat(notificationsOf(session, employeeId)).isEmpty();
   }
 
   /** N5: 알림 저장이 실패하면 같은 트랜잭션이므로 신청도 함께 롤백된다. */
@@ -135,9 +138,12 @@ class NotificationIntegrationTest {
 
     Long enrollments =
         jdbcTemplate.queryForObject(
-            "select count(*) from enrollment where employee_id = ?", Long.class, employeeId);
+            "select count(*) from enrollment where session_id = ? and employee_id = ?",
+            Long.class,
+            session.getId(),
+            employeeId);
     assertThat(enrollments).isEqualTo(0L);
-    assertThat(notificationsOf(employeeId)).isEmpty();
+    assertThat(notificationsOf(session, employeeId)).isEmpty();
   }
 
   // ---------- 도우미 ----------
@@ -154,10 +160,13 @@ class NotificationIntegrationTest {
         CourseSession.create(course, LocalDateTime.now().plusDays(1), "테스트실", capacity));
   }
 
-  private List<Map<String, Object>> notificationsOf(Long employeeId) {
+  /** 이 회차의 신청에 딸린 해당 사원의 알림. 이전 실행이 남긴 행과 겹치지 않도록 회차로 좁힌다. */
+  private List<Map<String, Object>> notificationsOf(CourseSession session, Long employeeId) {
     return jdbcTemplate.queryForList(
-        "select type, enrollment_id, message from notification where employee_id = ?"
-            + " order by id",
+        "select n.type, n.enrollment_id, n.message from notification n"
+            + " join enrollment e on e.id = n.enrollment_id"
+            + " where e.session_id = ? and n.employee_id = ? order by n.id",
+        session.getId(),
         employeeId);
   }
 }

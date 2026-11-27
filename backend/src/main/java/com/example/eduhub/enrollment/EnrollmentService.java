@@ -14,6 +14,8 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
+import org.springframework.util.Assert;
 
 @Service
 @RequiredArgsConstructor
@@ -161,6 +163,10 @@ public class EnrollmentService {
 
   private void publishConfirmed(
       Enrollment enrollment, CourseSession session, ConfirmationReason reason) {
+    // BEFORE_COMMIT 리스너는 트랜잭션 밖 발행에는 조용히 실행되지 않으므로 바로 실패시킨다.
+    Assert.state(
+        TransactionSynchronizationManager.isActualTransactionActive(),
+        "확정 이벤트는 트랜잭션 안에서 발행해야 한다(밖이면 알림이 기록되지 않는다)");
     eventPublisher.publishEvent(
         new EnrollmentConfirmedEvent(
             enrollment.getId(),

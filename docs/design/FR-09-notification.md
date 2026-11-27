@@ -38,7 +38,7 @@ EnrollmentService (트랜잭션, 회차 락)
 ### 2-1. 알림 저장이 실패하면
 
 - 신청도 함께 롤백된다(같은 트랜잭션). 같은 DB에 행 하나를 넣는 것이라 드물고, "신청은 있는데 알림 기록은 없다"보다 일관적이다
-- 리스너는 예외를 잡지 않는다. 오류 응답은 기존 GlobalExceptionHandler가 처리한다
+- 리스너는 예외를 잡지 않는다. `GlobalExceptionHandler`에는 `DataAccessException`·`Exception` 처리기가 없으므로 Spring Boot 기본 오류 응답(500)이 나간다. 다른 예상 밖 예외와 같은 경로다
 
 ### 2-2. 동기 실행 (Q3)
 

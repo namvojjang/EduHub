@@ -23,6 +23,7 @@ import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.Optional;
 import org.hibernate.exception.ConstraintViolationException;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -34,6 +35,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.test.util.ReflectionTestUtils;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 @ExtendWith(MockitoExtension.class)
 class EnrollmentServiceTest {
@@ -49,8 +51,15 @@ class EnrollmentServiceTest {
 
   private CourseSession session;
 
+  @AfterEach
+  void clearTransaction() {
+    TransactionSynchronizationManager.setActualTransactionActive(false);
+  }
+
   @BeforeEach
   void setUp() {
+    // 서비스는 트랜잭션 안에서만 이벤트를 발행한다. 단위 테스트에서는 활성 상태를 흉내 낸다.
+    TransactionSynchronizationManager.setActualTransactionActive(true);
     Course course = Course.create("테스트 과정", "개발", "설명");
     ReflectionTestUtils.setField(course, "id", COURSE_ID);
     session = CourseSession.create(course, LocalDateTime.now().plusDays(1), "강의실", 2);
@@ -568,6 +577,22 @@ class EnrollmentServiceTest {
     assertThat(event.getSessionId()).isEqualTo(SESSION_ID);
     assertThat(event.getCourseId()).isEqualTo(COURSE_ID);
     assertThat(event.getCourseTitle()).isEqualTo("테스트 과정");
+  }
+
+  @Test
+  void publishingOutsideTransactionFailsImmediately() {
+    TransactionSynchronizationManager.setActualTransactionActive(false);
+    givenSessionLocked();
+    when(enrollmentRepository.countBySessionIdAndStatus(SESSION_ID, EnrollmentStatus.CONFIRMED))
+        .thenReturn(0L);
+    when(enrollmentRepository.countBySessionIdAndStatus(SESSION_ID, EnrollmentStatus.WAITING))
+        .thenReturn(0L);
+    givenSaveReturnsArgument();
+
+    assertThatThrownBy(() -> service.apply(EMPLOYEE_ID, SESSION_ID))
+        .isInstanceOf(IllegalStateException.class);
+
+    verify(eventPublisher, never()).publishEvent(any(Object.class));
   }
 
   @Test
