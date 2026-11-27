@@ -1,10 +1,10 @@
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { AxiosError, AxiosHeaders } from 'axios';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { courseApi } from '../api/courseApi';
+import { courseApi } from '@eduhub/http';
 import { useCourseDetail } from './useCourseDetail';
 
-vi.mock('../api/courseApi', () => ({
+vi.mock('@eduhub/http', () => ({
   courseApi: { detail: vi.fn() },
 }));
 

@@ -1,7 +1,7 @@
 import type { CourseRequest } from '@eduhub/api-client';
 import { Alert, Button, Drawer, Group, Select, Stack, Textarea, TextInput } from '@mantine/core';
 import { FormEvent, useEffect, useState } from 'react';
-import { getErrorMessage } from '../api/errorMessage';
+import { getErrorMessage } from '@eduhub/http';
 import { CATEGORIES } from '../constants/categories';
 
 interface Props {

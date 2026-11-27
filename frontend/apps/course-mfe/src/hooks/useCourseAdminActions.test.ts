@@ -1,9 +1,9 @@
 import { act, renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { courseAdminApi } from '../api/courseApi';
+import { courseAdminApi } from '@eduhub/http';
 import { useCourseAdminActions } from './useCourseAdminActions';
 
-vi.mock('../api/courseApi', () => ({
+vi.mock('@eduhub/http', () => ({
   courseAdminApi: {
     createCourse: vi.fn(),
     createSession: vi.fn(),

@@ -1,6 +1,6 @@
 import type { PageResponseCourseSummaryResponse } from '@eduhub/api-client';
 import { useEffect, useState } from 'react';
-import { courseApi } from '../api/courseApi';
+import { courseApi } from '@eduhub/http';
 
 export interface CourseQuery {
   keyword: string;

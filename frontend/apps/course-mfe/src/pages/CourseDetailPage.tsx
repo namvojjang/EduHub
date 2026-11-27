@@ -1,3 +1,5 @@
+import type { SessionResponse } from '@eduhub/api-client';
+import { EmptyState } from '@eduhub/ui';
 import {
   Alert,
   Anchor,
@@ -14,12 +16,11 @@ import {
 } from '@mantine/core';
 import { IconCalendarOff, IconSearchOff } from '@tabler/icons-react';
 import { useState } from 'react';
+import type { ReactNode } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { EmptyState } from '../components/EmptyState';
 import { SessionCard } from '../components/SessionCard';
 import { categoryColor } from '../constants/categories';
 import { COURSE_STATUS_COLOR, COURSE_STATUS_LABEL } from '../constants/statusLabels';
-import { EnrollButton } from '../enrollment/EnrollButton';
 import { useCourseDetail } from '../hooks/useCourseDetail';
 
 /**
@@ -35,8 +36,16 @@ function disabledReason(courseStatus?: string, sessionStatus?: string): string |
   return undefined;
 }
 
+/** 회차 카드 안에 그릴 동작(신청 버튼 등)에 넘기는 값. 이 화면이 아는 값만 준다(설계 2-3). */
+export type SessionActionContext = { disabledReason?: string; onChanged: () => void };
+
+interface CourseDetailPageProps {
+  /** 회차마다 카드의 동작 자리에 그린다. course-mfe는 신청을 모른다: shell이 신청 버튼을 끼운다. */
+  renderSessionAction?: (session: SessionResponse, ctx: SessionActionContext) => ReactNode;
+}
+
 /** 과정 상세 화면 (FR-02, FR-04). 데이터는 useCourseDetail로만 가져온다. */
-export function CourseDetailPage() {
+export function CourseDetailPage({ renderSessionAction }: CourseDetailPageProps) {
   const { id } = useParams();
   // 신청 성공 때 올려서 남은 자리를 다시 받는다. 다시 받는 동안에도 이전 data가 유지된다.
   const [reloadKey, setReloadKey] = useState(0);
@@ -123,13 +132,10 @@ export function CourseDetailPage() {
                     remainingSeats={session.remainingSeats}
                     status={session.status}
                     action={
-                      session.id !== undefined && (
-                        <EnrollButton
-                          sessionId={session.id}
-                          disabledReason={disabledReason(data.status, session.status)}
-                          onChanged={() => setReloadKey((k) => k + 1)}
-                        />
-                      )
+                      renderSessionAction?.(session, {
+                        disabledReason: disabledReason(data.status, session.status),
+                        onChanged: () => setReloadKey((k) => k + 1),
+                      })
                     }
                   />
                 </div>

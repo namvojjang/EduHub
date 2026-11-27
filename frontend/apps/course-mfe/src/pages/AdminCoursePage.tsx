@@ -21,9 +21,9 @@ import { notifications } from '@mantine/notifications';
 import { IconCalendarOff, IconDots, IconPencil, IconSearchOff } from '@tabler/icons-react';
 import { useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { getErrorMessage } from '../api/errorMessage';
+import { getErrorMessage } from '@eduhub/http';
 import { CourseFormDialog } from '../components/CourseFormDialog';
-import { EmptyState } from '../components/EmptyState';
+import { EmptyState, formatDateTime } from '@eduhub/ui';
 import { SessionFormDialog } from '../components/SessionFormDialog';
 import { categoryColor } from '../constants/categories';
 import {
@@ -34,11 +34,6 @@ import {
 } from '../constants/statusLabels';
 import { useCourseAdminActions } from '../hooks/useCourseAdminActions';
 import { useCourseDetail } from '../hooks/useCourseDetail';
-
-/** "2026-12-01T09:00:00" → "2026-12-01 09:00" */
-function formatDateTime(value?: string): string {
-  return value ? value.replace('T', ' ').slice(0, 16) : '-';
-}
 
 type SessionDialog = { mode: 'create' } | { mode: 'edit'; session: SessionResponse } | null;
 

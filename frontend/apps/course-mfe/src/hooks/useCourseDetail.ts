@@ -1,7 +1,7 @@
 import type { CourseDetailResponse } from '@eduhub/api-client';
 import axios from 'axios';
 import { useEffect, useRef, useState } from 'react';
-import { courseApi } from '../api/courseApi';
+import { courseApi } from '@eduhub/http';
 
 export interface CourseDetailState {
   data: CourseDetailResponse | null;

@@ -1,4 +1,5 @@
 import { Badge, Card, Group, Progress, Stack, Text } from '@mantine/core';
+import { formatDateTime } from '@eduhub/ui';
 import { IconMapPin } from '@tabler/icons-react';
 import type { ReactNode } from 'react';
 import { SESSION_STATUS_COLOR, SESSION_STATUS_LABEL } from '../constants/statusLabels';
@@ -11,11 +12,6 @@ interface SessionCardProps {
   status?: string;
   /** 카드 오른쪽 아래에 그릴 동작(신청 버튼 등). 이 컴포넌트는 내용을 모른다. */
   action?: ReactNode;
-}
-
-/** "2026-12-01T09:00:00" → "2026-12-01 09:00" */
-export function formatDateTime(value?: string): string {
-  return value ? value.replace('T', ' ').slice(0, 16) : '-';
 }
 
 const NEARLY_FULL_RATIO = 0.2; // 남은/정원이 이 값 이하면 마감 임박
