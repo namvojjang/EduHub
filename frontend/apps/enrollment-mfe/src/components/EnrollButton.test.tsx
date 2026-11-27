@@ -2,27 +2,32 @@ import { act, fireEvent, screen, waitFor } from '@testing-library/react';
 import { AxiosError, AxiosHeaders } from 'axios';
 import { Route, Routes, useLocation } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { authApi, enrollmentApi } from '../api/clients';
-import { tokenStore } from '../api/http';
-import { renderWithAuth } from '../test/render';
+import { enrollmentApi } from '@eduhub/http';
+import { renderWithRouter } from '../test/render';
 import { EnrollButton } from './EnrollButton';
 
-vi.mock('../api/clients', () => ({
-  authApi: { login: vi.fn(), getMe: vi.fn() },
+// getErrorMessage 등 나머지 export는 실제 것을 쓰고 API 객체만 대체한다.
+vi.mock('@eduhub/http', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@eduhub/http')>()),
   enrollmentApi: { applyEnrollment: vi.fn(), cancelEnrollment: vi.fn() },
 }));
 
 const applyMock = vi.mocked(enrollmentApi.applyEnrollment);
-const employee = { employeeId: 1, employeeNo: 'E1001', name: '홍길동', role: 'EMPLOYEE' };
 
+let loggedIn = false;
+
+// 로그인 상태는 shell이 prop으로 내려 준다. 로그인한 테스트는 렌더 전에 login()을 부른다.
 function login() {
-  tokenStore.save('tok-1', employee);
+  loggedIn = true;
 }
 
 function renderButton(props: { disabledReason?: string; onChanged?: () => void } = {}) {
-  return renderWithAuth(
+  return renderWithRouter(
     <Routes>
-      <Route path="/courses/:id" element={<EnrollButton sessionId={7} {...props} />} />
+      <Route
+        path="/courses/:id"
+        element={<EnrollButton sessionId={7} loggedIn={loggedIn} {...props} />}
+      />
     </Routes>,
     { route: '/courses/3?tab=sessions' },
   );
@@ -40,10 +45,7 @@ function conflict(code: string): AxiosError {
 }
 
 beforeEach(() => {
-  localStorage.clear();
-  // 로그인 상태면 AuthProvider가 시작 시 /me를 확인한다
-  vi.mocked(authApi.getMe).mockReset();
-  vi.mocked(authApi.getMe).mockResolvedValue({ data: employee } as never);
+  loggedIn = false;
   applyMock.mockReset();
   vi.mocked(enrollmentApi.cancelEnrollment).mockReset();
 });
@@ -212,9 +214,9 @@ describe('EnrollButton', () => {
   });
 
   it('E1 비로그인 링크를 누르면 현재 경로(쿼리 포함)를 from으로 넘긴다', () => {
-    renderWithAuth(
+    renderWithRouter(
       <Routes>
-        <Route path="/courses/:id" element={<EnrollButton sessionId={7} />} />
+        <Route path="/courses/:id" element={<EnrollButton sessionId={7} loggedIn={false} />} />
         <Route path="/login" element={<FromDisplay />} />
       </Routes>,
       { route: '/courses/3?tab=sessions' },

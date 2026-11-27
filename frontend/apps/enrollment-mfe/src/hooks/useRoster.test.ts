@@ -1,10 +1,10 @@
 import type { RosterResponse } from '@eduhub/api-client';
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { enrollmentAdminApi } from '../api/clients';
+import { enrollmentAdminApi } from '@eduhub/http';
 import { useRoster } from './useRoster';
 
-vi.mock('../api/clients', () => ({
+vi.mock('@eduhub/http', () => ({
   enrollmentAdminApi: { getRoster: vi.fn() },
 }));
 

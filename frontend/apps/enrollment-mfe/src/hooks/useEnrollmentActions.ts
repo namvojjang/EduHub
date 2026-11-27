@@ -1,6 +1,6 @@
 import type { EnrollmentResponse } from '@eduhub/api-client';
 import { useCallback, useState } from 'react';
-import { enrollmentApi } from '../api/clients';
+import { enrollmentApi } from '@eduhub/http';
 
 /**
  * 수강생의 신청·취소 요청 (FR-04, FR-06).

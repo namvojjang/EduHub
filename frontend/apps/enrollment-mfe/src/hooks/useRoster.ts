@@ -1,6 +1,6 @@
 import type { RosterResponse } from '@eduhub/api-client';
 import { useEffect, useState } from 'react';
-import { enrollmentAdminApi } from '../api/clients';
+import { enrollmentAdminApi } from '@eduhub/http';
 
 export interface RosterState {
   data: RosterResponse | null;

@@ -19,17 +19,16 @@ import { notifications } from '@mantine/notifications';
 import axios from 'axios';
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { getErrorMessage } from '../api/errorMessage';
-import { EmptyState } from '../components/EmptyState';
-import { formatDateTime } from '../components/SessionCard';
+import { getErrorMessage } from '@eduhub/http';
+import { EmptyState, formatDateTime } from '@eduhub/ui';
 import {
   ENROLLMENT_STATUS_COLOR,
   ENROLLMENT_STATUS_LABEL,
   enrollmentErrorMessage,
-} from './enrollmentLabels';
-import { useEnrollmentActions } from './useEnrollmentActions';
-import { useMyEnrollments } from './useMyEnrollments';
-import type { MyEnrollmentStatus } from './useMyEnrollments';
+} from '../constants/enrollmentLabels';
+import { useEnrollmentActions } from '../hooks/useEnrollmentActions';
+import { useMyEnrollments } from '../hooks/useMyEnrollments';
+import type { MyEnrollmentStatus } from '../hooks/useMyEnrollments';
 
 const FILTERS: { value: string; label: string }[] = [
   { value: 'ALL', label: '전체' },
@@ -185,18 +184,21 @@ export function MyEnrollmentsPage() {
                       </Table.Td>
                       <Table.Td>{formatDateTime(e.appliedAt)}</Table.Td>
                       <Table.Td>
-                        {e.enrollmentId !== undefined && (e.status === 'CONFIRMED' || e.status === 'WAITING') && (
-                          <Button
-                            size="xs"
-                            color="red"
-                            variant="light"
-                            disabled={pending}
-                            aria-label={e.courseTitle ? `${e.courseTitle} 신청 취소` : '신청 취소'}
-                            onClick={() => confirmCancel(e)}
-                          >
-                            취소
-                          </Button>
-                        )}
+                        {e.enrollmentId !== undefined &&
+                          (e.status === 'CONFIRMED' || e.status === 'WAITING') && (
+                            <Button
+                              size="xs"
+                              color="red"
+                              variant="light"
+                              disabled={pending}
+                              aria-label={
+                                e.courseTitle ? `${e.courseTitle} 신청 취소` : '신청 취소'
+                              }
+                              onClick={() => confirmCancel(e)}
+                            >
+                              취소
+                            </Button>
+                          )}
                       </Table.Td>
                     </Table.Tr>
                   ))}
