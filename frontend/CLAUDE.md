@@ -45,6 +45,7 @@ npm run preview -w apps/shell             # 빌드 결과로 실행 (각 앱 bui
 
 - 컴포넌트 테스트는 각 앱의 `src/test/render.tsx`의 `renderWithProviders`로 렌더한다.
 - 로그인 상태가 필요한 shell 화면은 shell의 `renderWithAuth(ui, { route })`(`MemoryRouter` + `AuthProvider`). 로그인 상태는 렌더 전에 `tokenStore.save(...)`로 넣는다.
+- 로그인 상태가 필요 없는 remote 화면은 enrollment-mfe의 `src/test/render.tsx`의 `renderWithRouter(ui, { route })`(`MemoryRouter` + Provider)로 렌더한다.
 - remote 화면은 로그인 상태를 prop으로 받는다(예: `EnrollButton`의 `loggedIn`). API는 `vi.mock('@eduhub/http', ...)`로 대체한다.
 - shell 테스트에서 remote 모듈(`courseMfe/…`, `enrollmentMfe/…`)은 `vi.mock`으로 대체한다(테스트 때는 federation 대신 가상 모듈).
 - jsdom에서 Mantine 드롭다운·메뉴 항목은 `getByRole(..., { hidden: true })`가 필요할 수 있다.

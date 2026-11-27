@@ -1,5 +1,6 @@
 import { act, fireEvent, screen, waitFor } from '@testing-library/react';
 import { AxiosError, AxiosHeaders } from 'axios';
+import { useState } from 'react';
 import { Route, Routes, useLocation } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { enrollmentApi } from '@eduhub/http';
@@ -51,6 +52,27 @@ beforeEach(() => {
 });
 
 describe('EnrollButton', () => {
+  it('loggedIn이 true에서 false로 바뀌면 "로그인 후 신청" 안내로 바뀐다', () => {
+    // shell이 로그아웃 때 prop만 바꿔 다시 그리는 상황
+    function Harness() {
+      const [on, setOn] = useState(true);
+      return (
+        <>
+          <button onClick={() => setOn(false)}>로그아웃 시뮬레이션</button>
+          <Routes>
+            <Route path="/courses/:id" element={<EnrollButton sessionId={7} loggedIn={on} />} />
+          </Routes>
+        </>
+      );
+    }
+    renderWithRouter(<Harness />, { route: '/courses/3' });
+    expect(screen.queryByRole('link', { name: '로그인 후 신청' })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: '로그아웃 시뮬레이션' }));
+
+    expect(screen.getByRole('link', { name: '로그인 후 신청' })).toHaveAttribute('href', '/login');
+  });
+
   it('E1 비로그인이면 "로그인 후 신청" 링크가 /login으로 간다', () => {
     renderButton();
 

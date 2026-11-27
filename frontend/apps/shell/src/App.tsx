@@ -10,9 +10,12 @@ import { useAuth } from './auth/AuthContext';
 const failedRemotes = new Set<() => void>();
 
 /**
- * remote 화면을 필요할 때 불러오는 컴포넌트. React.lazy는 실패(reject)를 계속 기억하므로, 오류 경계가
- * 실패를 잡은 뒤(RemoteBoundary) lazy를 새로 만들어 둔다. 경로가 바뀌어 경계가 초기화되면 다시 불러오기를
- * 시도하고, remote가 복구됐다면 새로고침 없이 화면이 뜬다.
+ * remote 화면을 필요할 때 불러오는 컴포넌트. 흐름:
+ * 1) React.lazy는 실패(reject)를 기억한다.
+ * 2) 경계(RemoteBoundary)가 오류를 잡으면 실패한 lazy를 새로 만든다.
+ * 3) 경로가 바뀌어 경계의 key가 바뀌면 새 lazy로 다시 불러오기를 시도한다.
+ * 4) 같은 경로에서는 다시 시도하지 않는다(새로고침하거나 다른 화면에 갔다 와야 한다).
+ * 실제 Chrome에서 remote를 껐다 켠 뒤 다른 화면에 갔다 오면 새로고침 없이 복구되는 것을 확인했다.
  */
 function lazyRemote<P extends object>(load: () => Promise<ComponentType<P>>): ComponentType<P> {
   const make = () =>

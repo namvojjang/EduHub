@@ -52,7 +52,7 @@ frontend/
 | remote | 노출 | 비고 |
 |---|---|---|
 | courseMfe | `./CourseListPage`, `./CourseDetailPage`, `./AdminCourseListPage`, `./AdminCoursePage` | 교재의 `CourseFormPage` 대신 우리 관리자 화면 2개 |
-| enrollmentMfe | `./EnrollButton`, `./MyEnrollmentsPage`, `./RosterPage` | `RosterPage`는 지금의 `RosterRoute`(`key={sessionId}`)를 포함해 노출 |
+| enrollmentMfe | `./EnrollButton`, `./MyEnrollmentsPage`, `./RosterPage` | `RosterPage`는 래퍼 없이 노출. `key={sessionId}`는 shell의 `RosterRoute`가 붙인다 |
 
 ### 2-3. 과정 상세의 신청 버튼 (슬롯)
 

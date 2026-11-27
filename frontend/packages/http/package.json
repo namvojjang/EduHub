@@ -11,7 +11,9 @@
   },
   "dependencies": {
     "@eduhub/api-client": "*",
-    "axios": "^1.7.9",
+    "axios": "^1.7.9"
+  },
+  "peerDependencies": {
     "react-router-dom": "^6.30.6"
   },
   "devDependencies": {

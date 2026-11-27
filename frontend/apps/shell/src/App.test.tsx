@@ -1,10 +1,11 @@
 import { authApi, tokenStore } from '@eduhub/http';
 import { act, fireEvent, screen, waitFor } from '@testing-library/react';
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Suspense } from 'react';
+import { Route, Routes, useNavigate } from 'react-router-dom';
 import type { NavigateFunction } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { App } from './App';
+import { App, RosterRoute } from './App';
 import { AppLayout } from './layout/AppLayout';
 import { renderWithAuth } from './test/render';
 
@@ -187,26 +188,39 @@ describe('remote 오류 경계', () => {
   });
 
   it('remote가 복구되면 경로를 바꿨다 돌아왔을 때 새로고침 없이 다시 불러온다', async () => {
-    tokenStore.save('tok-1', admin);
-    vi.mocked(authApi.getMe).mockResolvedValue({ data: admin } as never);
-    renderWithAuth(
+    // lazy는 모듈 전역에 남으므로, 다른 테스트와 순서가 얽히지 않게 모듈을 새로 불러와 격리한다.
+    vi.resetModules();
+    const rtl = await import('@testing-library/react');
+    const router = await import('react-router-dom');
+    const http = await import('@eduhub/http');
+    const { App: FreshApp } = await import('./App');
+    const { renderWithAuth: renderFresh } = await import('./test/render');
+    const nav: { current: NavigateFunction | null } = { current: null };
+    function FreshNavCapture() {
+      nav.current = router.useNavigate();
+      return null;
+    }
+
+    http.tokenStore.save('tok-1', admin);
+    vi.mocked(http.authApi.getMe).mockResolvedValue({ data: admin } as never);
+    renderFresh(
       <>
-        <NavCapture />
-        <App />
+        <FreshNavCapture />
+        <FreshApp />
       </>,
       { route: '/admin/courses/1' },
     );
-    await screen.findByText('화면을 불러오지 못했습니다. 잠시 후 다시 시도하세요.');
+    await rtl.screen.findByText('화면을 불러오지 못했습니다. 잠시 후 다시 시도하세요.');
 
     remote.down = false; // remote가 다시 켜졌다
-    act(() => {
-      void navigateRef.current?.('/admin/courses');
+    rtl.act(() => {
+      void nav.current?.('/admin/courses');
     });
-    await screen.findByText('관리 목록');
-    act(() => {
-      void navigateRef.current?.('/admin/courses/1');
+    await rtl.screen.findByText('관리 목록');
+    rtl.act(() => {
+      void nav.current?.('/admin/courses/1');
     });
-    expect(await screen.findByText('관리 상세')).toBeInTheDocument();
+    expect(await rtl.screen.findByText('관리 상세')).toBeInTheDocument();
   });
 });
 
@@ -218,6 +232,33 @@ describe('RosterRoute', () => {
       <>
         <NavCapture />
         <App />
+      </>,
+      { route: '/admin/sessions/4/roster' },
+    );
+
+    fireEvent.click(await screen.findByRole('button', { name: '선택' }));
+    expect(screen.getByText('선택됨')).toBeInTheDocument();
+    expect(remote.rosterMounts).toBe(1);
+
+    act(() => {
+      void navigateRef.current?.('/admin/sessions/5/roster');
+    });
+    await waitFor(() => expect(remote.rosterMounts).toBe(2));
+    expect(screen.getByText('선택 없음')).toBeInTheDocument();
+  });
+
+  it('Remote 경계 없이 RosterRoute만으로도 회차가 바뀌면 RosterPage를 새로 만든다(key={sessionId})', async () => {
+    tokenStore.save('tok-1', admin);
+    vi.mocked(authApi.getMe).mockResolvedValue({ data: admin } as never);
+    // App의 Remote(pathname key)를 거치지 않고 RosterRoute만 렌더해, RosterRoute의 key만으로 재마운트됨을 본다.
+    renderWithAuth(
+      <>
+        <NavCapture />
+        <Suspense fallback={null}>
+          <Routes>
+            <Route path="/admin/sessions/:sessionId/roster" element={<RosterRoute />} />
+          </Routes>
+        </Suspense>
       </>,
       { route: '/admin/sessions/4/roster' },
     );
