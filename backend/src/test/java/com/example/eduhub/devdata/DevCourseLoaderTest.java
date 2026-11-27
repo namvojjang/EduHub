@@ -9,6 +9,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
+import com.example.eduhub.auth.DevAccountLoader;
 import com.example.eduhub.auth.Employee;
 import com.example.eduhub.auth.EmployeeRepository;
 import com.example.eduhub.auth.EmployeeRole;
@@ -23,13 +24,17 @@ import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.boot.ApplicationArguments;
+import org.springframework.context.annotation.Profile;
+import org.springframework.core.annotation.Order;
 import org.springframework.test.util.ReflectionTestUtils;
+import org.springframework.transaction.annotation.Transactional;
 
 class DevCourseLoaderTest {
 
@@ -131,6 +136,64 @@ class DevCourseLoaderTest {
     for (CourseSession s : others) {
       assertThat(s.getStartAt().isAfter(NOW)).isTrue();
     }
+  }
+
+  @Test
+  void thirdEnrollmentIsOnJavaCourseSession() {
+    stubEmptyDb(true);
+
+    loader.run(args);
+
+    List<CourseSession> sessions = savedSessions();
+    Enrollment third = savedEnrollments().get(2);
+    assertThat(third.getEmployeeId()).isEqualTo(1L);
+    assertThat(third.getSession()).isSameAs(sessions.get(2));
+    assertThat(third.getSession()).isNotSameAs(sessions.get(1));
+    assertThat(third.getSession().getCourse().getTitle()).isEqualTo("Java 백엔드 기초");
+  }
+
+  @Test
+  void sessionCapacitiesAndCoursesAreInOrder() {
+    stubEmptyDb(true);
+
+    loader.run(args);
+
+    List<CourseSession> sessions = savedSessions();
+    assertThat(sessions).extracting(CourseSession::getCapacity).containsExactly(10, 20, 2, 30);
+    assertThat(sessions)
+        .extracting(s -> s.getCourse().getTitle())
+        .containsExactly("데이터 분석 with SQL", "데이터 분석 with SQL", "Java 백엔드 기초", "업무 커뮤니케이션");
+  }
+
+  @Test
+  void appliedAtIsTruncatedToHourAndBeforeSessionStart() {
+    stubEmptyDb(true);
+
+    loader.run(args);
+
+    LocalDateTime base = NOW.truncatedTo(ChronoUnit.HOURS);
+    List<Enrollment> enrollments = savedEnrollments();
+    assertThat(enrollments)
+        .extracting(Enrollment::getAppliedAt)
+        .containsExactly(base.minusDays(7), base.minusDays(7), base.minusDays(1));
+    for (Enrollment e : enrollments) {
+      assertThat(e.getAppliedAt().isBefore(e.getSession().getStartAt())).isTrue();
+    }
+  }
+
+  @Test
+  void loaderIsDevOnlyAndRunsAfterAccountLoaderInTransaction() throws Exception {
+    Profile profile = DevCourseLoader.class.getAnnotation(Profile.class);
+    assertThat(profile).isNotNull();
+    assertThat(profile.value()).containsExactly("dev");
+    int courseOrder = DevCourseLoader.class.getAnnotation(Order.class).value();
+    int accountOrder = DevAccountLoader.class.getAnnotation(Order.class).value();
+    assertThat(courseOrder).isGreaterThan(accountOrder);
+    assertThat(
+            DevCourseLoader.class
+                .getMethod("run", ApplicationArguments.class)
+                .isAnnotationPresent(Transactional.class))
+        .isTrue();
   }
 
   @Test

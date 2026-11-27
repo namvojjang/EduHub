@@ -10,6 +10,7 @@ import com.example.eduhub.enrollment.Enrollment;
 import com.example.eduhub.enrollment.EnrollmentRepository;
 import java.time.Clock;
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -65,14 +66,16 @@ public class DevCourseLoader implements ApplicationRunner {
     this.clock = clock;
   }
 
-  // 전부 만들거나 전부 안 만든다(일부만 생기면 count()!=0이라 다시 채워지지 않는다).
+  // 예외가 나면 전부 롤백한다(일부만 생기면 count()!=0이라 다시 채워지지 않는다).
+  // 사번(E1001, E1002)이 없으면 과정·회차만 만들고 신청은 건너뛴다(설계 Q4).
   @Override
   @Transactional
   public void run(ApplicationArguments args) {
     if (courseRepository.count() != 0) {
       return;
     }
-    LocalDateTime now = LocalDateTime.now(clock);
+    // 시각은 정시로 자른다.
+    LocalDateTime now = LocalDateTime.now(clock).truncatedTo(ChronoUnit.HOURS);
 
     Course sql = saveCourse("데이터 분석 with SQL", "데이터", "SELECT부터 집계·조인까지 업무 데이터를 SQL로 분석하는 실습 과정");
     // 어제 10:00. 항상 과거다.
@@ -90,7 +93,7 @@ public class DevCourseLoader implements ApplicationRunner {
     Optional<Employee> e1001 = employeeRepository.findByEmployeeNo("E1001");
     Optional<Employee> e1002 = employeeRepository.findByEmployeeNo("E1002");
     if (!e1001.isPresent() || !e1002.isPresent()) {
-      log.warn("개발 계정(E1001, E1002)이 없어 신청 데이터는 만들지 않습니다");
+      log.warn("개발 계정(E1001, E1002)이 없어 신청 데이터는 만들지 않습니다. 신청까지 만들려면 dev DB의 과정을 비우고 다시 실행하세요");
       return;
     }
     Long id1 = e1001.get().getId();

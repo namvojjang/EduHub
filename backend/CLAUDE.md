@@ -36,6 +36,7 @@
 | A0001 | 박관리 | ADMIN |
 
 - 과정이 없으면 `DevCourseLoader`가 과정 3개(데이터 분석 with SQL, Java 백엔드 기초, 업무 커뮤니케이션)와 회차를 만든다. '데이터 분석 with SQL'의 어제 시작한 회차에 E1001·E1002가 확정돼 있어 바로 교육 완료·수료 처리를 확인할 수 있다. 이미 과정이 있는 DB에서는 만들지 않는다.
+  사번 E1001은 SQL·Java 과정, E1002는 SQL 과정에 이미 유효 신청이 있어 같은 과정의 다른 회차 신청은 D-03으로 409다. 새로 신청해 볼 수 있는 곳은 E1001은 업무 커뮤니케이션, E1002는 Java·업무 커뮤니케이션. 사원이 2명뿐이라 대기는 손으로 만든 회차에서 확인한다.
 
 - "내 것" 조회 API는 `/api/v1/me/...` 아래에 두고, 사원 ID는 `CurrentUser.from(jwt).getEmployeeId()`에서만 꺼낸다. 경로·쿼리·본문으로 사원 ID를 받지 않는다 (예: FR-07 `MyEnrollmentController`).
 - 컨트롤러 테스트: 요청에 `.with(TestAuth.as(employeeId, "EMPLOYEE"))`로 로그인 사용자를 지정한다.
