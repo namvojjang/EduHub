@@ -70,6 +70,9 @@ class EnrollmentCancelConcurrencyTest {
         .as("승급된 확정자는 원래 대기 1~5순위, " + message)
         .isEqualTo(enrollmentIds(waiting.subList(0, 5)));
     assertWaitingNumbersAre1ToN(session, message);
+    assertThat(notificationCount(session, "ENROLLMENT_PROMOTED"))
+        .as("승급 알림 수 = 승급 수, " + message)
+        .isEqualTo(promotedCount(session));
   }
 
   /** 시나리오 2: 같은 확정 신청을 10번 동시 취소해도 승급은 한 번이다. 락 전에 엔티티를 읽으면 이 테스트가 실패해야 한다. */
@@ -96,6 +99,9 @@ class EnrollmentCancelConcurrencyTest {
         .as("승급된 사람은 원래 대기 1순위, " + message)
         .isEqualTo(enrollmentIds(waiting.subList(0, 1)));
     assertWaitingNumbersAre1ToN(session, message);
+    assertThat(notificationCount(session, "ENROLLMENT_PROMOTED"))
+        .as("승급 알림 수 = 승급 수, " + message)
+        .isEqualTo(promotedCount(session));
   }
 
   /** 시나리오 3: 확정자 10명이 동시에 취소하면 대기자 10명이 각각 한 번씩 승급한다. */
@@ -121,6 +127,9 @@ class EnrollmentCancelConcurrencyTest {
         .as("승급된 10명은 원래 대기 앞 10명, " + message)
         .isEqualTo(enrollmentIds(waiting.subList(0, 10)));
     assertWaitingNumbersAre1ToN(session, message);
+    assertThat(notificationCount(session, "ENROLLMENT_PROMOTED"))
+        .as("승급 알림 수 = 승급 수, " + message)
+        .isEqualTo(promotedCount(session));
   }
 
   /** 시나리오 6: 확정자 취소와 대기 1순위 본인 취소가 겹쳐도 어느 순서든 대기 2순위가 확정된다. 겹칠 확률을 높이려고 20개 회차를 한꺼번에 돌린다. */
@@ -156,6 +165,9 @@ class EnrollmentCancelConcurrencyTest {
           .isEqualTo(enrollmentIds(waiting.subList(1, 2)));
       assertThat(waitingCount(session)).as(message).isEqualTo(1);
       assertThat(statusOf(waiting.get(2))).as("원래 대기 3순위, " + message).isEqualTo("WAITING");
+      assertThat(notificationCount(session, "ENROLLMENT_PROMOTED"))
+          .as("승급 알림 수 = 승급 수, " + message)
+          .isEqualTo(promotedCount(session));
     }
   }
 
@@ -193,9 +205,25 @@ class EnrollmentCancelConcurrencyTest {
     assertThat(promotedConfirmedIds(session))
         .as("승급된 3명은 원래 대기 앞 3명, " + message)
         .isEqualTo(enrollmentIds(waiting.subList(0, 3)));
+    assertThat(notificationCount(session, "ENROLLMENT_PROMOTED"))
+        .as("승급 알림 수 = 승급 수, " + message)
+        .isEqualTo(3);
   }
 
   // ---------- 도우미 ----------
+
+  /** 회차 신청에 딸린 알림 수 (FR-09). type이 null이면 전체. */
+  private long notificationCount(CourseSession session, String type) {
+    Long count =
+        jdbcTemplate.queryForObject(
+            "select count(*) from notification n join enrollment e on e.id = n.enrollment_id"
+                + " where e.session_id = ? and (?::text is null or n.type = ?)",
+            Long.class,
+            session.getId(),
+            type,
+            type);
+    return count == null ? 0 : count;
+  }
 
   private static class Applicant {
     final Long employeeId;

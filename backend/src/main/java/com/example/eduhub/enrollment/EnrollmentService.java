@@ -10,9 +10,12 @@ import java.util.Locale;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.hibernate.exception.ConstraintViolationException;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
+import org.springframework.util.Assert;
 
 @Service
 @RequiredArgsConstructor
@@ -23,6 +26,7 @@ public class EnrollmentService {
 
   private final CourseSessionRepository courseSessionRepository;
   private final EnrollmentRepository enrollmentRepository;
+  private final ApplicationEventPublisher eventPublisher;
 
   /**
    * 수강 신청 (FR-04, NFR-01, D-03). 정원이 차면 오류가 아니라 대기로 저장한다.
@@ -73,6 +77,10 @@ public class EnrollmentService {
       throw e;
     }
     // 위반 후에는 쿼리를 하지 않는다. 순번은 정상 저장된 뒤, 회차 락을 쥔 채 계산한다 (FR-05).
+    // FR-09: 바로 확정된 경우만 알림 이벤트를 낸다(대기는 없음). 처리는 커밋 직전, 같은 트랜잭션에서 실행된다.
+    if (saved.getStatus() == EnrollmentStatus.CONFIRMED) {
+      publishConfirmed(saved, session, ConfirmationReason.APPLIED);
+    }
     return EnrollmentResponse.from(saved, waitingNumberOf(saved));
   }
 
@@ -145,9 +153,28 @@ public class EnrollmentService {
       if (!first.isPresent()) {
         return promoted;
       }
-      first.get().promote(now);
+      Enrollment next = first.get();
+      next.promote(now);
       promoted++;
+      // FR-09: 승급마다 이벤트 1건. 과정명은 락을 쥔 회차에서 꺼낸다. 처리는 커밋 직전, 같은 트랜잭션에서 실행된다.
+      publishConfirmed(next, lockedSession, ConfirmationReason.PROMOTED);
     }
+  }
+
+  private void publishConfirmed(
+      Enrollment enrollment, CourseSession session, ConfirmationReason reason) {
+    // BEFORE_COMMIT 리스너는 트랜잭션 밖 발행에는 조용히 실행되지 않으므로 바로 실패시킨다.
+    Assert.state(
+        TransactionSynchronizationManager.isActualTransactionActive(),
+        "확정 이벤트는 트랜잭션 안에서 발행해야 한다(밖이면 알림이 기록되지 않는다)");
+    eventPublisher.publishEvent(
+        new EnrollmentConfirmedEvent(
+            enrollment.getId(),
+            enrollment.getEmployeeId(),
+            session.getId(),
+            session.getCourse().getId(),
+            session.getCourse().getTitle(),
+            reason));
   }
 
   /** 대기 순번 = 앞선 대기 수 + 1. 대기가 아니면 null (FR-05, D-04). */

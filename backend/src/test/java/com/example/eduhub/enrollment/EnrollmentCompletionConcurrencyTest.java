@@ -246,6 +246,12 @@ class EnrollmentCompletionConcurrencyTest {
   }
 
   private void cleanUp(Course course) {
+    // FR-09: 알림이 신청을 참조하므로 먼저 지운다.
+    jdbcTemplate.update(
+        "delete from notification where enrollment_id in"
+            + " (select e.id from enrollment e join course_session s on s.id = e.session_id"
+            + " where s.course_id = ?)",
+        course.getId());
     jdbcTemplate.update(
         "delete from enrollment where session_id in"
             + " (select id from course_session where course_id = ?)",
