@@ -6,25 +6,26 @@ import '@mantine/notifications/styles.css';
 import 'pretendard/dist/web/variable/pretendardvariable-dynamic-subset.css';
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
-import { BrowserRouter } from 'react-router-dom';
-import { App } from './App';
-import { AuthProvider } from './auth/AuthContext';
-import { AppLayout } from './layout/AppLayout';
-import { theme } from './theme';
+import { BrowserRouter, Route, Routes } from 'react-router-dom';
+import { AdminCourseListPage } from './pages/AdminCourseListPage';
+import { AdminCoursePage } from './pages/AdminCoursePage';
+import { CourseDetailPage } from './pages/CourseDetailPage';
+import { CourseListPage } from './pages/CourseListPage';
 
-// 단독 실행용 진입점. Module Federation으로 shell에 붙일 때는 App을 노출한다.
+// 단독 실행용 진입점(개발 편의, 설계 2-5). shell에서 불러갈 때는 쓰이지 않는다: Provider·테마·라우터는 shell이 만든다.
+// 로그인 화면이 없으므로 로그인이 필요한 관리자 화면은 토큰이 없으면 서버가 401로 막는다. 신청 버튼 자리(슬롯)는 비어 있다.
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <MantineProvider theme={theme} defaultColorScheme="light">
-      {/* BrowserRouter는 ModalsProvider보다 바깥: 확인 창 안에서도 router를 쓸 수 있게 한다. */}
+    <MantineProvider defaultColorScheme="light">
       <BrowserRouter>
         <ModalsProvider>
           <Notifications />
-          <AuthProvider>
-            <AppLayout>
-              <App />
-            </AppLayout>
-          </AuthProvider>
+          <Routes>
+            <Route path="/" element={<CourseListPage />} />
+            <Route path="/courses/:id" element={<CourseDetailPage />} />
+            <Route path="/admin/courses" element={<AdminCourseListPage />} />
+            <Route path="/admin/courses/:id" element={<AdminCoursePage />} />
+          </Routes>
         </ModalsProvider>
       </BrowserRouter>
     </MantineProvider>

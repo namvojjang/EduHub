@@ -2,10 +2,40 @@
   "version": "0.0.1",
   "configurations": [
     {
+      "name": "shell",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev:shell", "--prefix", "frontend"],
+      "port": 3000
+    },
+    {
       "name": "course-mfe",
       "runtimeExecutable": "npm",
       "runtimeArgs": ["run", "dev:course", "--prefix", "frontend"],
       "port": 3001
+    },
+    {
+      "name": "enrollment-mfe",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev:enrollment", "--prefix", "frontend"],
+      "port": 3002
+    },
+    {
+      "name": "shell-preview",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["--prefix", "frontend", "run", "preview", "-w", "apps/shell"],
+      "port": 3000
+    },
+    {
+      "name": "course-mfe-preview",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["--prefix", "frontend", "run", "preview", "-w", "apps/course-mfe"],
+      "port": 3001
+    },
+    {
+      "name": "enrollment-mfe-preview",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["--prefix", "frontend", "run", "preview", "-w", "apps/enrollment-mfe"],
+      "port": 3002
     },
     {
       "name": "backend",

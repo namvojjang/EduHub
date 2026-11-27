@@ -1,7 +1,7 @@
 import type { SessionRequest } from '@eduhub/api-client';
 import { Alert, Button, Drawer, Group, Stack, TextInput } from '@mantine/core';
 import { FormEvent, useEffect, useState } from 'react';
-import { getErrorMessage } from '../api/errorMessage';
+import { getErrorMessage } from '@eduhub/http';
 
 interface Props {
   open: boolean;

@@ -10,7 +10,7 @@ EduHub: 사내 교육과정 조회·수강 신청 시스템. 임직원(수강생
 | 경로 | 내용 | 세부 지침 |
 |---|---|---|
 | `backend/` | Java 8, Spring Boot 2.7, Gradle 7.6(Kotlin DSL, 래퍼 포함) | `backend/CLAUDE.md` |
-| `frontend/` | React 18 + TypeScript, Mantine 8.3, Axios, Module Federation(`shell`, `course-mfe`, `enrollment-mfe`), npm workspaces. 현재는 `course-mfe` 단독 앱만 있다(`shell`, `enrollment-mfe`는 아직 없음) | `frontend/CLAUDE.md` |
+| `frontend/` | React 18 + TypeScript, Mantine 8.3, Axios, Module Federation(`shell` 3000, `course-mfe` 3001, `enrollment-mfe` 3002), npm workspaces | `frontend/CLAUDE.md` |
 | `docs/` | 요구사항·결정 사항 | — |
 | `.env.example` | 필요한 환경 변수 이름(값 없음) | — |
 
@@ -22,7 +22,7 @@ cd backend && ./gradlew spotlessApply   # 포맷 적용
 cd backend && ./gradlew bootRun         # 실행 (dev 프로필, .env.example의 DB 변수 필요)
 ```
 
-프론트엔드 명령은 설정이 추가되고 동작을 확인한 뒤에 적는다. 그 전에는 명령을 추측해서 쓰지 않는다.
+프론트엔드 명령(테스트·빌드·세 앱 실행)은 `frontend/CLAUDE.md`에 있다. 확인한 명령만 적고 추측해서 쓰지 않는다.
 
 ## 공통 규칙
 

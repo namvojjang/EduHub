@@ -5,7 +5,7 @@ import type {
   SessionResponse,
 } from '@eduhub/api-client';
 import { useCallback, useState } from 'react';
-import { courseAdminApi } from '../api/courseApi';
+import { courseAdminApi } from '@eduhub/http';
 
 /**
  * 관리자의 등록·수정·종료 요청 (FR-03).

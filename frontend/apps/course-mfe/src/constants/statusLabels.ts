@@ -4,7 +4,7 @@ export const COURSE_STATUS_LABEL: Record<string, string> = {
   CLOSED: '종료',
 };
 
-// enrollment/rosterLabels.ts에 같은 값이 복제돼 있다(6회차 공용 패키지로 합칠 것).
+// apps/enrollment-mfe/src/constants/rosterLabels.ts에 같은 값이 있다. 두 remote가 각자 둔다(같은 값을 유지).
 export const SESSION_STATUS_LABEL: Record<string, string> = {
   RECRUITING: '모집 중',
   CLOSED: '모집 마감',
