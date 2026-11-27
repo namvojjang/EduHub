@@ -56,7 +56,7 @@
 |---|---|
 | `POST /api/v1/enrollments`, `GET /api/v1/enrollments/{id}`, `POST /api/v1/enrollments/{id}/cancel` | `X-Employee-Id` 헤더 삭제. 사원 ID는 토큰의 `sub`. 로그인 필요 |
 | `/api/v1/admin/**` (FR-03 전부) | ADMIN만 |
-| `GET /api/v1/courses`, `GET /api/v1/courses/*`, `GET /api/health`, `/swagger-ui/**`, `/v3/api-docs/**` | 공개 (하위 경로는 로그인 필요, 2-3 참고) |
+| ~~`GET /api/v1/courses`, `GET /api/v1/courses/*`~~, `GET /api/health`, `/swagger-ui/**`, `/v3/api-docs/**` | 공개 (하위 경로는 로그인 필요, 2-3 참고). 개정(2026-11-27, D-06): 과정 목록·상세 GET 공개 해제. `docs/design/D-06-login-first.md` |
 
 - 경로·요청 본문·응답 본문은 바꾸지 않는다. 교재의 경로(`/api/sessions/{id}/enrollments`, `DELETE`)로 바꾸지 않는다.
 - 교재가 경고한 구멍("`POST /api/v1/courses`가 `anyRequest().authenticated()`에 걸려 사원도 등록 가능")은 이 프로젝트에서는 생기지 않는다. 쓰기 API가 모두 `/api/v1/admin/**` 아래에 있기 때문이다. 그래도 테스트로 막아 둔다 (6장 S9).
@@ -66,7 +66,7 @@
 | 순서 | 요청 | 규칙 |
 |---|---|---|
 | 1 | `POST /api/v1/auth/login` | permitAll |
-| 2 | `GET /api/v1/courses`, `GET /api/v1/courses/*`(지금 있는 공개 API만. 새로 추가되는 하위 경로는 기본적으로 로그인 필요, 최종 검토 제안 1), `GET /api/health`, `/swagger-ui/**`, `/swagger-ui.html`, `/v3/api-docs/**` | permitAll |
+| 2 | ~~`GET /api/v1/courses`, `GET /api/v1/courses/*`(지금 있는 공개 API만. 새로 추가되는 하위 경로는 기본적으로 로그인 필요, 최종 검토 제안 1)~~, `GET /api/health`, `/swagger-ui/**`, `/swagger-ui.html`, `/v3/api-docs/**` | permitAll. 개정(2026-11-27, D-06): 과정 목록·상세 GET 공개 해제. `docs/design/D-06-login-first.md` |
 | 3 | `/api/v1/admin/**` | `hasRole("ADMIN")` |
 | 4 | 그 밖의 모든 요청 | authenticated |
 
@@ -157,7 +157,7 @@ CREATE UNIQUE INDEX ux_employee_no ON employee (employee_no);
 | S6 | 〃 (기존 테스트 이전) | 남의 신청 조회·취소 | 404 (지금과 같음) |
 | S7 | `@WebMvcTest` | 사원 토큰으로 `/api/v1/admin/**` 각 쓰기 API | 403 `FORBIDDEN` |
 | S8 | 〃 | 관리자 토큰으로 과정 등록 | 201 |
-| S9 | 〃 | 토큰 없이 `POST /api/v1/admin/courses` / `GET /api/v1/courses` | 401 / 200 |
+| S9 | 〃 | 토큰 없이 `POST /api/v1/admin/courses` / `GET /api/v1/courses` | 401 / ~~200~~ (개정(2026-11-27, D-06): `GET /api/v1/courses`도 401. `docs/design/D-06-login-first.md`) |
 | S10 | 단위 | `AuthService`: 성공, 사번 없음, 비밀번호 틀림 | 같은 예외 (Mockito) |
 | S11 | 단위 | `JwtConfig`: 32바이트 미만 키 | 기동 실패(예외) |
 | S12 | 회귀 | 기존 `@WebMvcTest` 전부(`EnrollmentControllerTest`, `CourseAdminControllerTest`, `CourseControllerTest`, `HealthControllerTest`) | `X-Employee-Id` 대신 `jwt()`로 바꿔 모두 통과 |

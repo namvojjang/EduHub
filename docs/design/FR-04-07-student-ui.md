@@ -17,6 +17,8 @@
 | NFR-03 | `/my/enrollments`는 로그인 필요(`RequireAuth`). 실제 차단은 백엔드 401 |
 | NFR-07 | 신청 관련 파일은 `src/enrollment/`에 둔다. 6회차에 `enrollment-mfe`가 되므로 **`enrollment/`는 `pages/`·`components/`·`hooks/`(과정 쪽)를 import하지 않는다** |
 
+> D-06(2026-11-27)으로 대체(위 표 FR-04 행의 비로그인 "로그인 후 신청" 안내): 모든 화면은 로그인 후. `docs/design/D-06-login-first.md`
+
 ## 2. 구조
 
 ```
@@ -67,6 +69,8 @@ apps/course-mfe/src/
 - 로그인: "신청하기" → `apply` 중에는 `loading`. 성공하면 버튼 자리에 결과 `Alert`(확정: teal "신청이 확정되었습니다." / 대기: blue "대기 N번으로 등록되었습니다.") + "내 신청 내역" 링크, 그리고 `onChanged()` 호출. 409 `SESSION_NOT_RECRUITING`으로 실패해도 호출한다(회차 상태가 낡았으므로). `DUPLICATE_ENROLLMENT`는 호출하지 않는다
 - 실패: 버튼 아래 경고 문구(3-3). 버튼은 다시 누를 수 있다
 - 분기 순서: 결과 → `disabledReason` → 비로그인 → 신청 버튼. 401은 문구를 띄우지 않는다(인터셉터가 로그인으로 보냄)
+
+> D-06(2026-11-27)으로 대체(비로그인 분기 삭제): 모든 화면은 로그인 후. `docs/design/D-06-login-first.md`
 
 ### 3-5. `CourseDetailPage` 변경
 - 회차마다 `<SessionCard … action={<EnrollButton sessionId=… disabledReason=… onChanged={reload} />} />`

@@ -13,7 +13,7 @@ import { CourseDetailPage } from './pages/CourseDetailPage';
 import { CourseListPage } from './pages/CourseListPage';
 
 // 단독 실행용 진입점(개발 편의, 설계 2-5). shell에서 불러갈 때는 쓰이지 않는다: Provider·테마·라우터는 shell이 만든다.
-// 로그인 화면이 없으므로 로그인이 필요한 관리자 화면은 토큰이 없으면 서버가 401로 막는다. 신청 버튼 자리(슬롯)는 비어 있다.
+// 단독 실행은 토큰이 없어 과정 API도 401이다(D-06). 화면 확인은 shell(3000)에서 한다. 신청 버튼 자리(슬롯)는 비어 있다.
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <MantineProvider defaultColorScheme="light">

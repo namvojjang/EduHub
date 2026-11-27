@@ -6,7 +6,7 @@
 
 | 경로 | 포트 | 역할 |
 |---|---|---|
-| `apps/shell` | 3000 | host. Mantine Provider·테마, 라우팅, 로그인 상태(`AuthContext`)·`RequireAuth`·로그인 화면, 레이아웃, remote 화면 조립 |
+| `apps/shell` | 3000 | host. Mantine Provider·테마, 라우팅, 로그인 상태(`AuthContext`)·`RequireAuth`, 로그인 화면(레이아웃 없는 전체 화면)·보호 레이아웃 라우트(`RequireAuth` + `AppLayout`), remote 화면 조립 |
 | `apps/course-mfe` | 3001 | remote. 과정 목록·상세·관리 화면 (FR-01~03) |
 | `apps/enrollment-mfe` | 3002 | remote. 신청 버튼, 내 신청 내역, 명단·수료 (FR-04~08) |
 | `packages/http` | — | `@eduhub/http`: `tokenStore`, 토큰 첨부·401 처리 `http`, API 인스턴스, `getErrorMessage` |
@@ -35,6 +35,8 @@ npm run preview -w apps/shell             # 빌드 결과로 실행 (각 앱 bui
 - **API**: API 호출은 `@eduhub/http`의 인스턴스로만. URL을 코드에 쓰지 않는다.
 - **모듈**: remote끼리, remote → shell import 금지. 두 remote를 한 화면에 함께 보이게 할 때는 shell이 슬롯으로 조립한다(예: 과정 상세의 `renderSessionAction`에 `EnrollButton`).
 - remote가 노출하는 화면을 바꾸면 `apps/shell/src/remotes.d.ts`도 맞춘다.
+- **로그인 먼저 (D-06)**: 모든 화면은 로그인 후 사용한다. 새 화면 라우트는 `apps/shell/src/App.tsx`의 보호 레이아웃 라우트(`RequireAuth` + `AppLayout`) 안에 넣고, `/login`만 그 밖에 둔다.
+- **remote 단독 실행(3001·3002)**: 토큰이 없어(포트가 다르면 localStorage가 다름) API가 401이다. 화면 확인은 shell(3000)에서 한다.
 
 ## UI
 
@@ -44,9 +46,9 @@ npm run preview -w apps/shell             # 빌드 결과로 실행 (각 앱 bui
 ## 테스트 작성
 
 - 컴포넌트 테스트는 각 앱의 `src/test/render.tsx`의 `renderWithProviders`로 렌더한다.
-- 로그인 상태가 필요한 shell 화면은 shell의 `renderWithAuth(ui, { route })`(`MemoryRouter` + `AuthProvider`). 로그인 상태는 렌더 전에 `tokenStore.save(...)`로 넣는다.
-- 로그인 상태가 필요 없는 remote 화면은 enrollment-mfe의 `src/test/render.tsx`의 `renderWithRouter(ui, { route })`(`MemoryRouter` + Provider)로 렌더한다.
-- remote 화면은 로그인 상태를 prop으로 받는다(예: `EnrollButton`의 `loggedIn`). API는 `vi.mock('@eduhub/http', ...)`로 대체한다.
+- shell의 보호 화면(`/login` 밖의 모든 화면)은 로그인 상태로 렌더해야 한다(안 하면 로그인 화면이 나온다). shell의 `renderWithAuth(ui, { route })`(`MemoryRouter` + `AuthProvider`)로 렌더한다. 로그인 상태는 렌더 전에 `tokenStore.save(...)`로 넣는다.
+- remote 화면은 enrollment-mfe의 `src/test/render.tsx`의 `renderWithRouter(ui, { route })`(`MemoryRouter` + Provider)로 렌더한다.
+- remote는 로그인 상태를 모른다(prop으로도 받지 않는다). 로그인 보장은 shell의 `RequireAuth`가 한다(D-06). API는 `vi.mock('@eduhub/http', ...)`로 대체한다.
 - shell 테스트에서 remote 모듈(`courseMfe/…`, `enrollmentMfe/…`)은 `vi.mock`으로 대체한다(테스트 때는 federation 대신 가상 모듈).
 - jsdom에서 Mantine 드롭다운·메뉴 항목은 `getByRole(..., { hidden: true })`가 필요할 수 있다.
 
