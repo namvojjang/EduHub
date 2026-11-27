@@ -136,39 +136,13 @@ describe('AppLayout', () => {
       'true',
     );
   });
-
-  it('로그인 화면에서도 검색창이 동작한다', () => {
-    renderAt('/login', null);
-    const input = screen.getByPlaceholderText('과정명으로 검색');
-    fireEvent.change(input, { target: { value: 'abc' } });
-    fireEvent.submit(input);
-    expect(screen.getByTestId('location')).toHaveTextContent('/?keyword=abc');
-  });
 });
 
 describe('AppLayout 로그인 상태별 메뉴 (L1)', () => {
-  it('L1 비로그인: 로그인 버튼이 있고 과정 관리·사용자 메뉴는 없다', () => {
-    renderAt('/', null);
-    expect(screen.getByRole('link', { name: '로그인' })).toHaveAttribute('href', '/login');
-    expect(screen.queryByRole('link', { name: /과정 관리/ })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: '사용자 메뉴' })).not.toBeInTheDocument();
-  });
-
-  it('로그인 화면에서는 헤더 로그인 버튼을 숨긴다', () => {
-    renderAt('/login', null);
-    expect(screen.queryByRole('link', { name: '로그인' })).not.toBeInTheDocument();
-  });
-
-  it('/LOGIN(대문자)에서도 헤더 로그인 버튼을 숨긴다', () => {
-    renderAt('/LOGIN', null);
-    expect(screen.queryByRole('link', { name: '로그인' })).not.toBeInTheDocument();
-  });
-
   it('L1 사원: 이름(아바타 첫 글자)이 보이고 과정 관리는 없다', () => {
     renderAt('/', employee);
     expect(screen.getByRole('button', { name: '사용자 메뉴' })).toHaveTextContent('홍');
     expect(screen.getByRole('button', { name: '사용자 메뉴' })).toHaveTextContent('홍길동');
-    expect(screen.queryByRole('link', { name: '로그인' })).not.toBeInTheDocument();
     expect(screen.queryByRole('link', { name: /과정 관리/ })).not.toBeInTheDocument();
     expect(screen.getByText('내 신청 내역')).toBeInTheDocument();
   });
@@ -185,14 +159,17 @@ describe('AppLayout 로그인 상태별 메뉴 (L1)', () => {
     expect(screen.getByText('사원')).toBeInTheDocument();
   });
 
-  it('로그아웃하면 토큰을 지우고 /로 이동하고 토스트를 띄운다', async () => {
+  it('F7 로그아웃하면 토큰을 지우고 /login으로 이동하고 토스트를 띄운다', async () => {
     renderAt('/admin/courses', admin);
     fireEvent.click(screen.getByRole('button', { name: '사용자 메뉴' }));
     fireEvent.click(await screen.findByRole('menuitem', { name: '로그아웃', hidden: true }));
     expect(tokenStore.get()).toBeNull();
-    expect(screen.getByTestId('location')).toHaveTextContent(/^\/$/);
+    expect(screen.getByTestId('location').textContent).toBe('/login');
     expect(await screen.findByText('로그아웃했습니다')).toBeInTheDocument();
-    await waitFor(() => expect(screen.getByRole('link', { name: '로그인' })).toBeInTheDocument());
+    // 레이아웃 단독 렌더라 가드는 없다. 사용자 메뉴와 과정 관리가 사라진다.
+    await waitFor(() =>
+      expect(screen.queryByRole('button', { name: '사용자 메뉴' })).not.toBeInTheDocument(),
+    );
     expect(screen.queryByRole('link', { name: /과정 관리/ })).not.toBeInTheDocument();
   });
 });
@@ -210,7 +187,7 @@ describe('AppLayout 다른 탭의 로그인 변화 (W1)', () => {
     localStorage.clear();
     dispatchStorage('eduhub.accessToken');
     expect(screen.queryByRole('link', { name: /과정 관리/ })).not.toBeInTheDocument();
-    expect(screen.getByRole('link', { name: '로그인' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: '사용자 메뉴' })).not.toBeInTheDocument();
   });
 
   it('다른 탭에서 다른 사용자로 로그인하면 이 탭의 이름이 바뀐다', () => {

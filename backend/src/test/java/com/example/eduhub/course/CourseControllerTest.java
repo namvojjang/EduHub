@@ -1,5 +1,6 @@
 package com.example.eduhub.course;
 
+import static com.example.eduhub.TestAuth.as;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -64,7 +65,7 @@ class CourseControllerTest {
                 1L));
 
     mockMvc
-        .perform(get("/api/v1/courses"))
+        .perform(get("/api/v1/courses").with(as(1L, "EMPLOYEE")))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.content[0].id").value(1))
         .andExpect(jsonPath("$.content[0].title").value("Java 기초"))
@@ -82,6 +83,7 @@ class CourseControllerTest {
     mockMvc
         .perform(
             get("/api/v1/courses")
+                .with(as(1L, "EMPLOYEE"))
                 .param("keyword", "java")
                 .param("category", "개발")
                 .param("page", "1")
@@ -99,7 +101,7 @@ class CourseControllerTest {
     given(courseQueryService.search(any(), any(), any(Pageable.class)))
         .willReturn(new PageResponse<>(Collections.emptyList(), 0, 20, 0L));
 
-    mockMvc.perform(get("/api/v1/courses")).andExpect(status().isOk());
+    mockMvc.perform(get("/api/v1/courses").with(as(1L, "EMPLOYEE"))).andExpect(status().isOk());
 
     ArgumentCaptor<Pageable> pageable = ArgumentCaptor.forClass(Pageable.class);
     verify(courseQueryService).search(isNull(), isNull(), pageable.capture());
@@ -130,7 +132,7 @@ class CourseControllerTest {
                 Collections.singletonList(session)));
 
     mockMvc
-        .perform(get("/api/v1/courses/1"))
+        .perform(get("/api/v1/courses/1").with(as(1L, "EMPLOYEE")))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.id").value(1))
         .andExpect(jsonPath("$.description").value("입문 과정"))
@@ -148,7 +150,7 @@ class CourseControllerTest {
     given(courseQueryService.getDetail(999L)).willThrow(new CourseNotFoundException(999L));
 
     mockMvc
-        .perform(get("/api/v1/courses/999"))
+        .perform(get("/api/v1/courses/999").with(as(1L, "EMPLOYEE")))
         .andExpect(status().isNotFound())
         .andExpect(jsonPath("$.code").value("COURSE_NOT_FOUND"))
         .andExpect(jsonPath("$.message").value("과정을 찾을 수 없습니다: 999"));
@@ -157,7 +159,7 @@ class CourseControllerTest {
   @Test
   void detailWithNonNumericIdIsBadRequest() throws Exception {
     mockMvc
-        .perform(get("/api/v1/courses/abc"))
+        .perform(get("/api/v1/courses/abc").with(as(1L, "EMPLOYEE")))
         .andExpect(status().isBadRequest())
         .andExpect(jsonPath("$.code").value("INVALID_REQUEST"));
     verifyNoInteractions(courseQueryService);
@@ -173,10 +175,20 @@ class CourseControllerTest {
   }
 
   @Test
-  void courseListIsPublic() throws Exception {
-    given(courseQueryService.search(any(), any(), any(Pageable.class)))
-        .willReturn(new PageResponse<>(Collections.emptyList(), 0, 20, 0L));
+  void courseListRequiresLogin() throws Exception {
+    mockMvc
+        .perform(get("/api/v1/courses"))
+        .andExpect(status().isUnauthorized())
+        .andExpect(jsonPath("$.code").value("UNAUTHENTICATED"));
+    verifyNoInteractions(courseQueryService);
+  }
 
-    mockMvc.perform(get("/api/v1/courses")).andExpect(status().isOk());
+  @Test
+  void courseDetailRequiresLogin() throws Exception {
+    mockMvc
+        .perform(get("/api/v1/courses/1"))
+        .andExpect(status().isUnauthorized())
+        .andExpect(jsonPath("$.code").value("UNAUTHENTICATED"));
+    verifyNoInteractions(courseQueryService);
   }
 }

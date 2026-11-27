@@ -72,6 +72,12 @@ describe('safeRedirectPath', () => {
 });
 
 describe('LoginPage', () => {
+  it('전체 화면 로그인에 EduHub 로고가 보이고 링크는 아니다 (D-06)', () => {
+    renderLogin();
+    expect(screen.getByText('EduHub')).toBeInTheDocument();
+    expect(screen.queryByRole('link')).not.toBeInTheDocument();
+  });
+
   it('A1 로그인에 성공하면 토큰을 저장하고 state.from으로 이동한다', async () => {
     loginSucceeds();
     renderLogin('/courses/3?x=1');
@@ -129,10 +135,17 @@ describe('LoginPage', () => {
     expect(screen.getByText('로그인이 만료되었습니다. 다시 로그인하세요.')).toBeInTheDocument();
   });
 
-  it('이미 로그인 상태면 /로 보낸다', () => {
+  it('이미 로그인 상태면 state.from(원래 가려던 화면)으로 보낸다', () => {
     tokenStore.save('tok-1', employee);
     vi.mocked(authApi.getMe).mockResolvedValue({ data: employee } as never);
     renderLogin('/courses/3');
+    expect(screen.getByTestId('location')).toHaveTextContent(/^\/courses\/3$/);
+  });
+
+  it('이미 로그인 상태이고 from이 없으면 /로 보낸다', () => {
+    tokenStore.save('tok-1', employee);
+    vi.mocked(authApi.getMe).mockResolvedValue({ data: employee } as never);
+    renderLogin();
     expect(screen.getByTestId('location')).toHaveTextContent(/^\/$/);
   });
 });

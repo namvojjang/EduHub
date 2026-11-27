@@ -124,6 +124,23 @@ class AuthIntegrationTest {
   }
 
   @Test
+  void healthIsPublicButCourseListRequiresLogin() throws Exception {
+    mockMvc.perform(get("/api/health")).andExpect(status().isOk());
+    // D-06 공개 목록: 로그인 API(다른 테스트), 헬스, API 문서
+    mockMvc.perform(get("/v3/api-docs")).andExpect(status().isOk());
+
+    mockMvc
+        .perform(get("/api/v1/courses"))
+        .andExpect(status().isUnauthorized())
+        .andExpect(jsonPath("$.code").value("UNAUTHENTICATED"));
+
+    // 대조: 로그인하면 같은 목록이 열린다 (D-06)
+    mockMvc
+        .perform(get("/api/v1/courses").header("Authorization", "Bearer " + loginAndGetToken()))
+        .andExpect(status().isOk());
+  }
+
+  @Test
   void forgedTokenIsUnauthorized() throws Exception {
     String token = loginAndGetToken();
     String[] parts = token.split("\\.");

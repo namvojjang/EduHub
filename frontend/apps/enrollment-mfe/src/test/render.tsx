@@ -21,7 +21,7 @@ export function renderWithProviders(ui: ReactElement) {
 
 type Route = string | { pathname: string; state?: unknown };
 
-// 라우터(MemoryRouter)가 필요한 화면 테스트용. 로그인 상태는 remote가 모르므로 필요하면 prop으로 넘긴다.
+// 라우터(MemoryRouter)가 필요한 화면 테스트용. remote는 로그인 상태를 모른다(로그인 보장은 shell의 RequireAuth, D-06).
 export function renderWithRouter(ui: ReactElement, options: { route?: Route } = {}) {
   return renderWithProviders(
     <MemoryRouter initialEntries={[options.route ?? '/']}>{ui}</MemoryRouter>,

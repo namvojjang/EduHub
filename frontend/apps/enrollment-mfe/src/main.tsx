@@ -17,7 +17,7 @@ function RosterRoute() {
 }
 
 // 단독 실행용 진입점(개발·확인 전용). 실제 서비스에서는 shell이 remoteEntry.js로 화면만 불러간다.
-// Provider·라우터는 여기에만 두고, 로그인 화면은 없다(토큰은 shell과 같은 localStorage 키를 쓴다).
+// Provider·라우터는 여기에만 두고, 로그인 화면은 없다. 포트가 달라 shell의 토큰(localStorage)을 볼 수 없어 API는 401이다(D-06). 화면 확인은 shell(3000)에서 한다.
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <MantineProvider defaultColorScheme="light">

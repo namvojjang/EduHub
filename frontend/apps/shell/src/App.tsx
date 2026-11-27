@@ -1,10 +1,10 @@
 import { Alert } from '@mantine/core';
 import { Component, lazy, Suspense } from 'react';
 import type { ComponentType, ReactNode } from 'react';
-import { Route, Routes, useLocation, useParams } from 'react-router-dom';
+import { Navigate, Outlet, Route, Routes, useLocation, useParams } from 'react-router-dom';
 import { LoginPage } from './auth/LoginPage';
 import { RequireAuth } from './auth/RequireAuth';
-import { useAuth } from './auth/AuthContext';
+import { AppLayout } from './layout/AppLayout';
 
 // 불러오기에 실패한 remote 화면의 lazy를 새것으로 바꾸는 함수들(아래 lazyRemote가 등록).
 const failedRemotes = new Set<() => void>();
@@ -100,79 +100,90 @@ export function RosterRoute() {
   return <RosterPage key={sessionId} />;
 }
 
-/** shell의 화면 경로. 라우터는 shell에만 있고, remote는 화면 컴포넌트만 내준다. */
+/**
+ * shell의 화면 경로. 라우터는 shell에만 있고, remote는 화면 컴포넌트만 내준다.
+ * D-06: 모든 화면은 로그인 후. `/login`만 레이아웃 밖이고, 나머지는 보호 레이아웃 라우트 안에 둔다.
+ */
 export function App() {
-  const { user } = useAuth();
-
   return (
     <Routes>
-      <Route
-        path="/"
-        element={
-          <Remote>
-            <CourseListPage />
-          </Remote>
-        }
-      />
-      <Route
-        path="/courses/:id"
-        element={
-          <Remote>
-            {/* course-mfe는 신청을 모른다: 회차마다 enrollment-mfe의 신청 버튼을 슬롯으로 끼운다(설계 2-3). */}
-            <CourseDetailPage
-              renderSessionAction={(session, ctx) =>
-                session.id != null && (
-                  <Remote>
-                    <EnrollButton sessionId={session.id} loggedIn={!!user} {...ctx} />
-                  </Remote>
-                )
-              }
-            />
-          </Remote>
-        }
-      />
       <Route path="/login" element={<LoginPage />} />
       <Route
-        path="/my/enrollments"
         element={
           <RequireAuth>
+            <AppLayout>
+              <Outlet />
+            </AppLayout>
+          </RequireAuth>
+        }
+      >
+        <Route
+          path="/"
+          element={
+            <Remote>
+              <CourseListPage />
+            </Remote>
+          }
+        />
+        <Route
+          path="/courses/:id"
+          element={
+            <Remote>
+              {/* course-mfe는 신청을 모른다: 회차마다 enrollment-mfe의 신청 버튼을 슬롯으로 끼운다(설계 2-3). */}
+              <CourseDetailPage
+                renderSessionAction={(session, ctx) =>
+                  session.id != null && (
+                    <Remote>
+                      <EnrollButton sessionId={session.id} {...ctx} />
+                    </Remote>
+                  )
+                }
+              />
+            </Remote>
+          }
+        />
+        <Route
+          path="/my/enrollments"
+          element={
             <Remote>
               <MyEnrollmentsPage />
             </Remote>
-          </RequireAuth>
-        }
-      />
-      {/* 관리자 화면 (FR-03). 화면에서도 ADMIN만 들어오게 하지만 실제 차단은 백엔드다 (NFR-03). */}
-      <Route
-        path="/admin/courses"
-        element={
-          <RequireAuth admin>
-            <Remote>
-              <AdminCourseListPage />
-            </Remote>
-          </RequireAuth>
-        }
-      />
-      <Route
-        path="/admin/courses/:id"
-        element={
-          <RequireAuth admin>
-            <Remote>
-              <AdminCoursePage />
-            </Remote>
-          </RequireAuth>
-        }
-      />
-      <Route
-        path="/admin/sessions/:sessionId/roster"
-        element={
-          <RequireAuth admin>
-            <Remote>
-              <RosterRoute />
-            </Remote>
-          </RequireAuth>
-        }
-      />
+          }
+        />
+        {/* 관리자 화면 (FR-03). 화면에서도 ADMIN만 들어오게 하지만 실제 차단은 백엔드다 (NFR-03). */}
+        <Route
+          path="/admin/courses"
+          element={
+            <RequireAuth admin>
+              <Remote>
+                <AdminCourseListPage />
+              </Remote>
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/admin/courses/:id"
+          element={
+            <RequireAuth admin>
+              <Remote>
+                <AdminCoursePage />
+              </Remote>
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/admin/sessions/:sessionId/roster"
+          element={
+            <RequireAuth admin>
+              <Remote>
+                <RosterRoute />
+              </Remote>
+            </RequireAuth>
+          }
+        />
+        {/* 없는 경로는 목록으로(404 화면은 범위 밖, Q2). */}
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Route>
     </Routes>
   );
 }

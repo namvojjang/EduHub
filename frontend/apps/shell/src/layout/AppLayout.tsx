@@ -3,7 +3,6 @@ import {
   AppShell,
   Avatar,
   Burger,
-  Button,
   Group,
   Menu,
   NavLink,
@@ -27,12 +26,11 @@ import {
 import { useEffect, useState } from 'react';
 import type { FormEvent, ReactNode } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { isLoginPath } from '@eduhub/http';
 import { useAuth } from '../auth/AuthContext';
 
 const NAVBAR_ID = 'app-navbar';
 
-// 단독 실행용 앱 뼈대: 헤더(로고·검색·테마·사용자) + 좌측 내비. shell이 생기면 shell로 옮긴다.
+// 로그인 후 화면의 뼈대: 헤더(로고·검색·테마·사용자) + 좌측 내비. 보호 라우트 안에서만 그려진다(D-06).
 export function AppLayout({ children }: { children: ReactNode }) {
   const [opened, { toggle, close }] = useDisclosure();
   const { pathname, search } = useLocation();
@@ -121,7 +119,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
             >
               {computed === 'dark' ? <IconSun size={18} /> : <IconMoon size={18} />}
             </ActionIcon>
-            {user ? (
+            {user && (
               <Menu position="bottom-end" withinPortal>
                 <Menu.Target>
                   <UnstyledButton aria-label="사용자 메뉴">
@@ -145,17 +143,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
                   </Menu.Item>
                 </Menu.Dropdown>
               </Menu>
-            ) : !isLoginPath(pathname) ? (
-              // 로그인 화면에서는 이 버튼을 숨긴다(from이 /login이 되는 것을 막는다).
-              <Button
-                component={Link}
-                to="/login"
-                state={{ from: pathname + search }}
-                variant="default"
-              >
-                로그인
-              </Button>
-            ) : null}
+            )}
           </Group>
         </Group>
       </AppShell.Header>
