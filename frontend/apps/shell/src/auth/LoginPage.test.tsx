@@ -72,6 +72,12 @@ describe('safeRedirectPath', () => {
 });
 
 describe('LoginPage', () => {
+  it('전체 화면 로그인에 EduHub 로고가 보이고 링크는 아니다 (D-06)', () => {
+    renderLogin();
+    expect(screen.getByText('EduHub')).toBeInTheDocument();
+    expect(screen.queryByRole('link')).not.toBeInTheDocument();
+  });
+
   it('A1 로그인에 성공하면 토큰을 저장하고 state.from으로 이동한다', async () => {
     loginSucceeds();
     renderLogin('/courses/3?x=1');

@@ -26,7 +26,6 @@ declare module 'courseMfe/AdminCoursePage' {
 declare module 'enrollmentMfe/EnrollButton' {
   export function EnrollButton(props: {
     sessionId: number;
-    loggedIn: boolean;
     disabledReason?: string;
     onChanged?: () => void;
   }): JSX.Element;

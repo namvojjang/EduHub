@@ -114,7 +114,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     tokenStore.clear();
     setUser(null);
     setExpired(false);
-    navigate('/');
+    // 로그아웃은 세션을 끝내는 것이라 from 없이 로그인 화면으로 보낸다(로그인 뒤 `/`, D-06).
+    navigate('/login', { replace: true });
     notifications.show({ message: '로그아웃했습니다' });
   }, [navigate]);
 

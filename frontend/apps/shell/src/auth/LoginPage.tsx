@@ -1,5 +1,17 @@
 import type { ErrorResponse } from '@eduhub/api-client';
-import { Alert, Button, Paper, PasswordInput, Stack, Text, TextInput, Title } from '@mantine/core';
+import {
+  Alert,
+  Button,
+  Center,
+  Group,
+  Paper,
+  PasswordInput,
+  Stack,
+  Text,
+  TextInput,
+  ThemeIcon,
+  Title,
+} from '@mantine/core';
 import axios from 'axios';
 import { useRef, useState } from 'react';
 import type { FormEvent } from 'react';
@@ -67,41 +79,65 @@ export function LoginPage() {
     }
   };
 
+  // D-06: 레이아웃 없는 전체 화면. 로고는 헤더와 같은 모양이지만 링크는 아니다(가드가 다시 로그인으로 보낸다).
   return (
-    <Paper withBorder shadow="sm" p="xl" radius="md" maw={400} mx="auto" mt="xl">
-      <form onSubmit={handleSubmit}>
-        <Stack>
-          <Title order={2} size="h3">
-            로그인
-          </Title>
-          {expired && !error && (
-            <Alert color="yellow">로그인이 만료되었습니다. 다시 로그인하세요.</Alert>
-          )}
-          {error && <Alert color="red">{error}</Alert>}
-          <TextInput
-            label="사번"
-            required
-            autoComplete="username"
-            value={employeeNo}
-            onChange={(e) => setEmployeeNo(e.currentTarget.value)}
-          />
-          <PasswordInput
-            label="비밀번호"
-            required
-            autoComplete="current-password"
-            value={password}
-            onChange={(e) => setPassword(e.currentTarget.value)}
-          />
-          <Button type="submit" loading={submitting}>
-            로그인
-          </Button>
-          {import.meta.env.DEV && (
-            <Text size="xs" c="dimmed">
-              개발 계정: 사원 E1001·E1002, 관리자 A0001 (비밀번호 dev-password)
+    <Center
+      mih="100vh"
+      p="md"
+      bg="light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-8))"
+    >
+      <Stack align="center" gap="lg" w="100%">
+        <Group gap="xs" wrap="nowrap">
+          <ThemeIcon
+            size="lg"
+            variant="gradient"
+            gradient={{ from: 'indigo', to: 'cyan' }}
+            autoContrast
+          >
+            <Text fw={700} size="sm">
+              E
             </Text>
-          )}
-        </Stack>
-      </form>
-    </Paper>
+          </ThemeIcon>
+          <Text fw={700} size="lg">
+            EduHub
+          </Text>
+        </Group>
+        <Paper withBorder shadow="sm" p="xl" radius="md" w="100%" maw={400}>
+          <form onSubmit={handleSubmit}>
+            <Stack>
+              <Title order={2} size="h3">
+                로그인
+              </Title>
+              {expired && !error && (
+                <Alert color="yellow">로그인이 만료되었습니다. 다시 로그인하세요.</Alert>
+              )}
+              {error && <Alert color="red">{error}</Alert>}
+              <TextInput
+                label="사번"
+                required
+                autoComplete="username"
+                value={employeeNo}
+                onChange={(e) => setEmployeeNo(e.currentTarget.value)}
+              />
+              <PasswordInput
+                label="비밀번호"
+                required
+                autoComplete="current-password"
+                value={password}
+                onChange={(e) => setPassword(e.currentTarget.value)}
+              />
+              <Button type="submit" loading={submitting}>
+                로그인
+              </Button>
+              {import.meta.env.DEV && (
+                <Text size="xs" c="dimmed">
+                  개발 계정: 사원 E1001·E1002, 관리자 A0001 (비밀번호 dev-password)
+                </Text>
+              )}
+            </Stack>
+          </form>
+        </Paper>
+      </Stack>
+    </Center>
   );
 }

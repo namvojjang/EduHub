@@ -63,6 +63,29 @@ describe('AuthProvider', () => {
     expect(screen.getByTestId('key').textContent).toBe(keyBefore);
   });
 
+  it('F7 로그아웃하면 토큰을 지우고 /login으로 replace 이동한다(from 없음)', () => {
+    tokenStore.save('tok-1', employee);
+    vi.mocked(authApi.getMe).mockResolvedValue({ data: employee } as never);
+    function LogoutProbe() {
+      const { logout } = useAuth();
+      return <button onClick={logout}>logout</button>;
+    }
+    renderWithAuth(
+      <>
+        <Probe />
+        <LogoutProbe />
+      </>,
+      { route: '/admin/courses?page=2' },
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'logout' }));
+
+    expect(tokenStore.get()).toBeNull();
+    expect(screen.getByTestId('state')).toHaveTextContent('user=none expired=false');
+    expect(screen.getByTestId('where').textContent).toBe('/login');
+    expect(screen.getByTestId('from')).toBeEmptyDOMElement();
+  });
+
   it('저장된 사용자 형식이 이상하면(role 없음) 로그인하지 않은 것으로 본다', () => {
     localStorage.setItem('eduhub.accessToken', 'tok-1');
     localStorage.setItem('eduhub.user', JSON.stringify({ name: '홍길동' }));

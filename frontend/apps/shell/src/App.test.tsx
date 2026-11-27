@@ -2,11 +2,10 @@ import { authApi, tokenStore } from '@eduhub/http';
 import { act, fireEvent, screen, waitFor } from '@testing-library/react';
 import { useState } from 'react';
 import { Suspense } from 'react';
-import { Route, Routes, useNavigate } from 'react-router-dom';
+import { Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import type { NavigateFunction } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { App, RosterRoute } from './App';
-import { AppLayout } from './layout/AppLayout';
 import { renderWithAuth } from './test/render';
 
 vi.mock('@eduhub/http', async (importOriginal) => ({
@@ -53,13 +52,9 @@ vi.mock('courseMfe/AdminCoursePage', () => ({
   },
 }));
 vi.mock('enrollmentMfe/EnrollButton', () => ({
-  EnrollButton: (p: {
-    sessionId: number;
-    loggedIn: boolean;
-    disabledReason?: string;
-    onChanged?: () => void;
-  }) => (
-    <div>{`신청:${p.sessionId}:${p.loggedIn}:${p.disabledReason ?? '-'}:${typeof p.onChanged}`}</div>
+  // loggedIn은 받지 않는다(D-06): 신청 버튼은 로그인 후 화면에만 그려진다.
+  EnrollButton: (p: { sessionId: number; disabledReason?: string; onChanged?: () => void }) => (
+    <div>{`신청:${p.sessionId}:${p.disabledReason ?? '-'}:${typeof p.onChanged}`}</div>
   ),
 }));
 vi.mock('enrollmentMfe/RosterPage', () => ({
@@ -89,11 +84,23 @@ function NavCapture() {
   navigateRef.current = useNavigate();
   return null;
 }
+function LocationDisplay() {
+  const { pathname, search } = useLocation();
+  return <div data-testid="location">{pathname + search}</div>;
+}
 const admin = { employeeId: 9, employeeNo: 'A0001', name: '관리자', role: 'ADMIN' } as never;
 const employee = { employeeId: 1, employeeNo: 'E1001', name: '김사원', role: 'EMPLOYEE' } as never;
 
+// 로그인 상태로 시작한다(보호 레이아웃 라우트를 통과해야 화면이 그려진다).
+function loginAs(user: never) {
+  tokenStore.save('tok-1', user);
+  vi.mocked(authApi.getMe).mockResolvedValue({ data: user } as never);
+}
+
 beforeEach(() => {
   localStorage.clear();
+  vi.mocked(authApi.login).mockReset();
+  vi.mocked(authApi.getMe).mockReset();
   remote.down = true;
   remote.rosterMounts = 0;
   // 오류 경계가 잡은 오류를 React가 console.error로 남긴다. 테스트 출력만 조용히 한다.
@@ -105,40 +112,116 @@ afterEach(() => {
 });
 
 describe('shell App 라우트', () => {
-  it('과정 목록 경로에서 courseMfe 화면을 그린다', async () => {
+  it('F4 로그인 상태의 과정 목록 경로는 레이아웃과 courseMfe 화면을 그린다', async () => {
+    loginAs(employee);
     renderWithAuth(<App />, { route: '/' });
 
     expect(await screen.findByText('과정 목록 화면')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'EduHub 홈' })).toBeInTheDocument();
+    expect(screen.getByPlaceholderText('과정명으로 검색')).toBeInTheDocument();
   });
 
-  it('과정 상세는 회차마다 EnrollButton을 슬롯으로 조립한다(비로그인이면 loggedIn=false)', async () => {
+  it('F5 로그인 상태에서 없는 경로는 /로 이동해 목록을 그린다', async () => {
+    loginAs(employee);
+    renderWithAuth(
+      <>
+        <LocationDisplay />
+        <App />
+      </>,
+      { route: '/nope' },
+    );
+
+    expect(await screen.findByText('과정 목록 화면')).toBeInTheDocument();
+    expect(screen.getByTestId('location').textContent).toBe('/');
+  });
+
+  it('F6 과정 상세는 회차마다 EnrollButton을 sessionId·ctx로 조립한다', async () => {
+    loginAs(employee);
     renderWithAuth(<App />, { route: '/courses/3' });
 
-    expect(await screen.findByText('신청:7:false:-:function')).toBeInTheDocument();
+    expect(await screen.findByText('신청:7:-:function')).toBeInTheDocument();
     // 상세 화면이 정한 마감 사유와 재조회 콜백이 그대로 넘어온다
-    expect(screen.getByText('신청:8:false:마감된 회차입니다.:function')).toBeInTheDocument();
-  });
-
-  it('로그인했으면 EnrollButton에 loggedIn=true를 넘긴다', async () => {
-    tokenStore.save('tok-1', employee);
-    vi.mocked(authApi.getMe).mockResolvedValue({ data: employee } as never);
-    renderWithAuth(<App />, { route: '/courses/3' });
-
-    expect(await screen.findByText('신청:7:true:-:function')).toBeInTheDocument();
+    expect(screen.getByText('신청:8:마감된 회차입니다.:function')).toBeInTheDocument();
   });
 
   it('id가 없는 회차에는 신청 버튼을 그리지 않는다', async () => {
+    loginAs(employee);
     renderWithAuth(<App />, { route: '/courses/3' });
 
-    await screen.findByText('신청:7:false:-:function');
+    await screen.findByText('신청:7:-:function');
     expect(screen.getByTestId('slot-noid')).toBeEmptyDOMElement();
   });
 
-  it('로그인하지 않고 관리자 경로에 가면 remote 화면 대신 로그인으로 보낸다', async () => {
+  it('로그인했지만 사원이 관리자 경로에 가면 경고를 보이고 remote 화면은 그리지 않는다', async () => {
+    loginAs(employee);
     renderWithAuth(<App />, { route: '/admin/courses' });
 
-    expect(await screen.findByRole('button', { name: '로그인' })).toBeInTheDocument();
+    expect(await screen.findByText('접근할 수 없습니다')).toBeInTheDocument();
     expect(screen.queryByText('관리 목록')).not.toBeInTheDocument();
+  });
+});
+
+describe('로그인 먼저 (D-06)', () => {
+  it.each(['/', '/courses/1', '/my/enrollments', '/admin/courses'])(
+    'F1 비로그인으로 %s에 가면 헤더·remote 화면 없이 로그인 화면이다',
+    async (route) => {
+      renderWithAuth(<App />, { route });
+
+      expect(await screen.findByRole('button', { name: '로그인' })).toBeInTheDocument();
+      expect(screen.queryByPlaceholderText('과정명으로 검색')).not.toBeInTheDocument();
+      expect(screen.queryByRole('link', { name: 'EduHub 홈' })).not.toBeInTheDocument();
+      expect(screen.queryByText('과정 목록 화면')).not.toBeInTheDocument();
+      expect(screen.queryByText('과정 상세 화면')).not.toBeInTheDocument();
+      expect(screen.queryByText('관리 목록')).not.toBeInTheDocument();
+      expect(screen.queryByText(/^화면을 불러오지 못했습니다/)).not.toBeInTheDocument();
+    },
+  );
+
+  it('F2 비로그인으로 /courses/1?x=1에 갔다가 로그인하면 같은 경로의 remote 화면으로 돌아온다', async () => {
+    vi.mocked(authApi.login).mockResolvedValue({
+      data: { accessToken: 'tok-1', user: employee },
+    } as never);
+    vi.mocked(authApi.getMe).mockResolvedValue({ data: employee } as never);
+    renderWithAuth(
+      <>
+        <LocationDisplay />
+        <App />
+      </>,
+      { route: '/courses/1?x=1' },
+    );
+
+    fireEvent.change(await screen.findByLabelText(/사번/), { target: { value: 'E1001' } });
+    fireEvent.change(screen.getByLabelText(/비밀번호/), { target: { value: 'dev-password' } });
+    fireEvent.click(screen.getByRole('button', { name: '로그인' }));
+
+    expect(await screen.findByText('과정 상세 화면')).toBeInTheDocument();
+    expect(screen.getByTestId('location')).toHaveTextContent('/courses/1?x=1');
+  });
+
+  it('F3 /login은 레이아웃(검색·로고 링크·왼쪽 메뉴) 없이 로그인 화면만 그리고 로고 글자는 보인다', async () => {
+    renderWithAuth(<App />, { route: '/login' });
+
+    expect(await screen.findByRole('button', { name: '로그인' })).toBeInTheDocument();
+    expect(screen.getByText('EduHub')).toBeInTheDocument();
+    expect(screen.queryByPlaceholderText('과정명으로 검색')).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'EduHub 홈' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: /교육과정/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: /내 신청 내역/ })).not.toBeInTheDocument();
+  });
+
+  it('F9 로그인 상태에서 다른 탭이 로그아웃하면(storage 이벤트) 로그인 화면으로 간다', async () => {
+    loginAs(employee);
+    renderWithAuth(<App />, { route: '/' });
+    await screen.findByText('과정 목록 화면');
+
+    localStorage.clear();
+    act(() => {
+      window.dispatchEvent(new StorageEvent('storage', { key: 'eduhub.accessToken' }));
+    });
+
+    expect(await screen.findByRole('button', { name: '로그인' })).toBeInTheDocument();
+    expect(screen.queryByText('과정 목록 화면')).not.toBeInTheDocument();
+    expect(screen.queryByPlaceholderText('과정명으로 검색')).not.toBeInTheDocument();
   });
 });
 
@@ -146,12 +229,7 @@ describe('remote 오류 경계', () => {
   it('remote 하나를 불러오지 못하면 그 자리만 Alert이고 레이아웃과 다른 remote는 그대로다', async () => {
     tokenStore.save('tok-1', employee);
     vi.mocked(authApi.getMe).mockResolvedValue({ data: employee } as never);
-    renderWithAuth(
-      <AppLayout>
-        <App />
-      </AppLayout>,
-      { route: '/my/enrollments' },
-    );
+    renderWithAuth(<App />, { route: '/my/enrollments' });
 
     expect(
       await screen.findByText('화면을 불러오지 못했습니다. 잠시 후 다시 시도하세요.'),
