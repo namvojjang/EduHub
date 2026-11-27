@@ -21,6 +21,7 @@
 - 도메인 패키지: `com.example.eduhub.course`, `com.example.eduhub.enrollment`, `com.example.eduhub.auth`(인증·사원). 공통 코드는 `com.example.eduhub.common`.
 - `enrollment`는 `course`를 참조할 수 있다. `course`는 `enrollment`에 의존하지 않는다. course는 `SeatCounter` 인터페이스로만 자리 수를 받는다(enrollment의 `EnrollmentSeatCounter`가 구현, FR-02).
 - `enrollment`는 `auth`의 `CurrentUser`와 `Employee`(명단 조회 읽기)만 참조한다. `course`는 `auth`에 의존하지 않는다.
+- `com.example.eduhub.devdata`: dev 프로필 전용 기본 데이터(`DevCourseLoader`). 도메인 패키지를 참조할 수 있지만, 도메인 패키지는 이 패키지를 참조하지 않는다.
 - 계층: Controller → Service → Repository. Controller에서 Repository를 직접 호출하지 않는다.
 - 서비스 계층 테스트 커버리지 70% 이상 (NFR-05).
 
@@ -33,6 +34,8 @@
 | E1001 | 김사원 | EMPLOYEE |
 | E1002 | 이사원 | EMPLOYEE |
 | A0001 | 박관리 | ADMIN |
+
+- 과정이 없으면 `DevCourseLoader`가 과정 3개(데이터 분석 with SQL, Java 백엔드 기초, 업무 커뮤니케이션)와 회차를 만든다. '데이터 분석 with SQL'의 어제 시작한 회차에 E1001·E1002가 확정돼 있어 바로 교육 완료·수료 처리를 확인할 수 있다. 이미 과정이 있는 DB에서는 만들지 않는다.
 
 - "내 것" 조회 API는 `/api/v1/me/...` 아래에 두고, 사원 ID는 `CurrentUser.from(jwt).getEmployeeId()`에서만 꺼낸다. 경로·쿼리·본문으로 사원 ID를 받지 않는다 (예: FR-07 `MyEnrollmentController`).
 - 컨트롤러 테스트: 요청에 `.with(TestAuth.as(employeeId, "EMPLOYEE"))`로 로그인 사용자를 지정한다.

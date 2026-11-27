@@ -5,6 +5,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.context.annotation.Profile;
+import org.springframework.core.annotation.Order;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -17,6 +18,8 @@ import org.springframework.transaction.annotation.Transactional;
 @Slf4j
 @Component
 @Profile("dev")
+// 과정 기본 데이터(devdata.DevCourseLoader, Order 2)가 사원 ID를 쓰므로 먼저 실행한다.
+@Order(1)
 @RequiredArgsConstructor
 public class DevAccountLoader implements ApplicationRunner {
 
