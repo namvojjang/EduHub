@@ -54,13 +54,14 @@ export function LoginPage() {
   const [password, setPassword] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  // 방금 이 화면에서 로그인한 경우. user가 설정되는 렌더가 먼저 와도 "이미 로그인" 이동(/)이 from 이동을 덮지 않게 한다.
+  // 방금 이 화면에서 로그인한 경우. user가 설정되는 렌더가 먼저 와도 "이미 로그인" 이동이 handleSubmit의 이동과 겹치지 않게 한다.
   const justLoggedIn = useRef(false);
 
   const from = safeRedirectPath((location.state as { from?: unknown } | null)?.from);
 
   if (user && !justLoggedIn.current) {
-    return <Navigate to="/" replace />;
+    // 이미 로그인됨(다른 탭 로그인, 시작 시 확인 등): 원래 가려던 화면으로 보낸다(D-06).
+    return <Navigate to={from} replace />;
   }
 
   const handleSubmit = async (e: FormEvent) => {
