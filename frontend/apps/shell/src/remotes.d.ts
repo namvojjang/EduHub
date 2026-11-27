@@ -37,6 +37,6 @@ declare module 'enrollmentMfe/MyEnrollmentsPage' {
 }
 
 declare module 'enrollmentMfe/RosterPage' {
-  /** 회차가 바뀌면 key로 새로 만드는 래퍼까지 포함한다(지금의 RosterRoute 동작). */
+  /** 래퍼 없이 노출한다. 회차가 바뀌면 새로 만드는 key={sessionId}는 shell의 RosterRoute가 붙인다. */
   export function RosterPage(): JSX.Element;
 }
